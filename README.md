@@ -43,11 +43,18 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 
 ### A) Přes web (doporučeno – jde pak instalovat na plochu)
 
-Stejným způsobem jako AR Geodet: obsah složky nahrát do repozitáře a zapnout GitHub Pages.
-Pak v telefonu otevřít adresu a dát **Přidat na plochu** (Android: nabídka Chromu → *Přidat na plochu*;
-iPhone: Sdílet → *Přidat na plochu*). Od té chvíle se aplikace chová jako běžná ikona a jede offline.
+Aplikace už běží na GitHub Pages:
+
+### 👉 https://stepanvcelak11.github.io/moje-finance/
+
+Otevřete tu adresu v telefonu a dejte **Přidat na plochu** (Android: nabídka Chromu →
+*Přidat na plochu*; iPhone: Sdílet → *Přidat na plochu*). Od té chvíle se aplikace chová
+jako běžná ikona a jede i bez signálu.
 
 Instalace na plochu funguje jen přes **https** (nebo localhost) – proto ta cesta přes Pages.
+
+Repozitář: https://github.com/stepanvcelak11/moje-finance – po `git push` na větev `main`
+se web sám přestaví (chvilku to trvá).
 
 ### B) Rychlé vyzkoušení na počítači
 
