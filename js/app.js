@@ -111,15 +111,17 @@
      PŘEPÍNÁNÍ OBRAZOVEK
      ================================================================= */
 
+  var POHLEDY = ['prehled', 'historie', 'grafy', 'ucty', 'nastaveni'];
+
   function jdi(kam) {
     pohled = kam;
-    ['prehled', 'historie', 'ucty', 'nastaveni'].forEach(function (p) {
+    POHLEDY.forEach(function (p) {
       $('pohled-' + p).hidden = (p !== kam);
     });
     vse('.nav-tl').forEach(function (b) {
       b.classList.toggle('nav-akt', b.getAttribute('data-jdi') === kam);
     });
-    var sHlavickou = (kam === 'prehled' || kam === 'historie');
+    var sHlavickou = (kam === 'prehled' || kam === 'historie' || kam === 'grafy');
     $('hlavicka').classList.toggle('skryta', !sHlavickou);
     document.body.classList.toggle('bez-hlavicky', !sHlavickou);
     vykresli();
@@ -130,8 +132,25 @@
     aktualizujHlavicku();
     if (pohled === 'prehled') vykresliPrehled();
     else if (pohled === 'historie') vykresliHistorii();
+    else if (pohled === 'grafy') vykresliGrafy();
     else if (pohled === 'ucty') vykresliUcty();
     else if (pohled === 'nastaveni') vykresliNastaveni();
+  }
+
+  /** Doplní vektorové ikony do všech míst označených v HTML. */
+  function doplnIkony(korn) {
+    vse('[data-ikona]', korn).forEach(function (el) {
+      if (!el.firstChild) el.innerHTML = ik(el.getAttribute('data-ikona'));
+    });
+  }
+
+  function ik(klic, trida) { return global.FIkony.svg(klic, trida); }
+
+  /** Ikona v barevném poli – používá se u kategorií, účtů i položek. */
+  function ikonaVPoli(klic, barvaSlot, trida) {
+    var b = G.barva(barvaSlot);
+    return '<span class="' + (trida || '') + '" style="color:' + b +
+      ';background:color-mix(in srgb,' + b + ' 18%, var(--surface-2))">' + ik(klic) + '</span>';
   }
 
   function aktualizujHlavicku() {
@@ -161,7 +180,7 @@
     // zůstatek
     $('hero-zustatek').textContent = kc(D.celkovyZustatek());
     $('hero-uctu').innerHTML = s.ucty.map(function (u) {
-      return '<span class="hero-znacka">' + esc(u.ikona) + ' ' + esc(u.nazev) +
+      return '<span class="hero-znacka">' + ik(u.ikona) + esc(u.nazev) +
         ' <b>' + esc(kc(D.zustatekUctu(u.id))) + '</b></span>';
     }).join('');
 
@@ -256,7 +275,8 @@
       stav = '<span class="blizko">zbývá ' + esc(kc(r.zbyva)) + '</span>';
     }
     return '<div class="rozpocet-radek">' +
-      '<div class="rozpocet-hlava"><span>' + esc(r.ikona) + ' ' + esc(r.nazev) + '</span>' +
+      '<div class="rozpocet-hlava"><span class="rozpocet-jmeno">' + ik(r.ikona) +
+        esc(r.nazev) + '</span>' +
       '<b>' + esc(kc(r.utraceno)) + ' / ' + esc(kc(r.limit)) + '</b></div>' +
       '<div class="rozpocet-pruh"><div class="rozpocet-vypln" style="width:' + podil.toFixed(1) +
         '%;background:' + barva + '"></div></div>' +
@@ -274,10 +294,20 @@
 
   /* ---------- řádek transakce ---------- */
 
+  /** Drobné značky u záznamu: rozepsaný nákup a přiložená účtenka. */
+  function znackyZaznamu(t) {
+    var html = '';
+    if (t.polozky && t.polozky.length) {
+      html += '<span class="polozky-znacka">' + ik('ui-historie') + t.polozky.length + '</span>';
+    }
+    if (t.fotka) html += '<span class="polozky-znacka">' + ik('ui-obrazek') + '</span>';
+    return html;
+  }
+
   function polozkaHtml(t) {
     var zn, castka, ikona, nazev, pod, barvaIkony;
     if (t.typ === 'prevod') {
-      zn = ''; castka = kc(t.castka); ikona = '↔️';
+      zn = ''; castka = kc(t.castka); ikona = 'prevod';
       nazev = 'Převod';
       pod = D.ucet(t.ucet).nazev + ' → ' + D.ucet(t.ucetDo).nazev;
       barvaIkony = 'var(--ink-3)';
@@ -291,9 +321,9 @@
     }
     if (t.pozn) pod = t.pozn + ' · ' + pod;
     return '<button class="polozka" data-transakce="' + esc(t.id) + '">' +
-      '<span class="polozka-ikona" style="background:color-mix(in srgb,' + barvaIkony +
-        ' 18%, var(--surface-2))">' + esc(ikona) + '</span>' +
-      '<span><span class="polozka-nazev">' + esc(nazev) + '</span>' +
+      '<span class="polozka-ikona" style="color:' + barvaIkony + ';background:color-mix(in srgb,' +
+        barvaIkony + ' 18%, var(--surface-2))">' + ik(ikona) + '</span>' +
+      '<span><span class="polozka-nazev">' + esc(nazev) + znackyZaznamu(t) + '</span>' +
       '<span class="polozka-pod">' + esc(pod) + '</span></span>' +
       '<span class="polozka-castka ' + zn + '">' + esc(castka) + '</span>' +
     '</button>';
@@ -333,12 +363,14 @@
     var znacky = [];
     if (filtr.rozsah === 'dnes' || filtr.rozsah === 'tyden') {
       znacky.push('<button class="znacka-filtru" data-zrus="rozsah">' +
-        (filtr.rozsah === 'dnes' ? 'Jen dnešek' : 'Tento týden') + ' ✕</button>');
+        (filtr.rozsah === 'dnes' ? 'Jen dnešek' : 'Tento týden') + ik('ui-zavrit') + '</button>');
     }
     if (filtr.kat) znacky.push('<button class="znacka-filtru" data-zrus="kat">' +
-      esc(D.kategorie(filtr.kat).ikona + ' ' + D.kategorie(filtr.kat).nazev) + ' ✕</button>');
+      ik(D.kategorie(filtr.kat).ikona) + esc(D.kategorie(filtr.kat).nazev) +
+      ik('ui-zavrit') + '</button>');
     if (filtr.ucet) znacky.push('<button class="znacka-filtru" data-zrus="ucet">' +
-      esc(D.ucet(filtr.ucet).ikona + ' ' + D.ucet(filtr.ucet).nazev) + ' ✕</button>');
+      ik(D.ucet(filtr.ucet).ikona) + esc(D.ucet(filtr.ucet).nazev) +
+      ik('ui-zavrit') + '</button>');
     $('filtr-aktivni').hidden = znacky.length === 0;
     $('filtr-aktivni').innerHTML = znacky.join('');
 
@@ -387,8 +419,9 @@
       var z = D.zustatekUctu(u.id);
       var pocet = s.transakce.filter(function (t) { return t.ucet === u.id || t.ucetDo === u.id; }).length;
       return '<button class="ucet-karta" data-ucet="' + esc(u.id) + '">' +
-        '<span class="ucet-ikona" style="background:color-mix(in srgb,' + G.barva(u.barva) +
-          ' 18%, var(--surface-2))">' + esc(u.ikona) + '</span>' +
+        '<span class="ucet-ikona" style="color:' + G.barva(u.barva) +
+          ';background:color-mix(in srgb,' + G.barva(u.barva) + ' 18%, var(--surface-2))">' +
+          ik(u.ikona) + '</span>' +
         '<span><span class="ucet-jmeno">' + esc(u.nazev) + '</span>' +
         '<span class="ucet-pod">' + pocet + ' ' + tvarZaznamu(pocet) + ' · počátek ' + esc(kc(u.pocatek)) + '</span></span>' +
         '<span class="ucet-castka' + (z < 0 ? ' vydaj' : '') + '">' + esc(kc(z)) + '</span>' +
@@ -398,11 +431,13 @@
 
   function dialogUctu(id) {
     var u = id ? D.najdi(D.stav().ucty, id) : null;
+    volba = { ikona: u ? u.ikona : 'karta', barva: u ? (u.barva || 1) : (D.stav().ucty.length % 8) + 1 };
     dialog({
       titulek: u ? 'Upravit účet' : 'Nový účet',
       telo:
         '<label>Název</label><input class="pole" id="d-nazev" value="' + esc(u ? u.nazev : '') + '" placeholder="např. Peněženka">' +
-        '<label>Ikona</label><input class="pole" id="d-ikona" maxlength="4" value="' + esc(u ? u.ikona : '💳') + '">' +
+        '<label>Ikona</label>' + mrizkaIkon() +
+        '<label>Barva</label>' + radekBarev() +
         '<label>Počáteční stav (' + esc(mena()) + ')</label><input class="pole" id="d-pocatek" inputmode="decimal" value="' + (u ? u.pocatek : 0) + '">' +
         (u ? '<button class="tl tl-nebezpeci tl-siroke" id="d-smaz">Smazat účet</button>' : ''),
       ano: 'Uložit',
@@ -412,13 +447,12 @@
         if (!nazev) { hlaska('Zadejte název účtu.'); return false; }
         var pocatek = parsujCastku($('d-pocatek').value);
         if (isNaN(pocatek)) pocatek = 0;
-        var ikona = $('d-ikona').value.trim() || '💳';
         var s = D.stav();
         if (u) {
-          u.nazev = nazev; u.ikona = ikona; u.pocatek = pocatek;
+          u.nazev = nazev; u.ikona = volba.ikona; u.pocatek = pocatek; u.barva = volba.barva;
         } else {
-          s.ucty.push({ id: D.noveId('u'), nazev: nazev, ikona: ikona, pocatek: pocatek,
-            barva: (s.ucty.length % 8) + 1 });
+          s.ucty.push({ id: D.noveId('u'), nazev: nazev, ikona: volba.ikona, pocatek: pocatek,
+            barva: volba.barva });
         }
         D.ulozHned();
         hlaska('Uloženo.');
@@ -465,7 +499,7 @@
     $('editor-rozpoctu').innerHTML = D.kategorieTypu('vydaj').map(function (k) {
       var v = s.rozpocty[k.id];
       return '<div class="editor-radek">' +
-        '<span class="kat-ikona">' + esc(k.ikona) + '</span>' +
+        '<span class="kat-ikona" style="color:' + G.barva(k.barva) + '">' + ik(k.ikona) + '</span>' +
         '<span>' + esc(k.nazev) + '</span>' +
         '<input class="pole" inputmode="decimal" data-rozpocet="' + esc(k.id) + '" placeholder="—" value="' +
           (v ? esc(String(v)) : '') + '">' +
@@ -479,7 +513,7 @@
     $('editor-kategorii').innerHTML = D.kategorieTypu(katTypVEditoru).map(function (k) {
       var pocet = s.transakce.filter(function (t) { return t.kat === k.id; }).length;
       return '<div class="editor-radek" style="grid-template-columns:26px 1fr auto">' +
-        '<span class="kat-ikona">' + esc(k.ikona) + '</span>' +
+        '<span class="kat-ikona" style="color:' + G.barva(k.barva) + '">' + ik(k.ikona) + '</span>' +
         '<span><span>' + esc(k.nazev) + '</span><span class="pravidelna-pod"> · ' + pocet + '×</span></span>' +
         '<span><button class="odkaz" data-upravkat="' + esc(k.id) + '">Upravit</button></span>' +
       '</div>';
@@ -490,7 +524,8 @@
       ? s.pravidelne.map(function (p) {
           var k = D.kategorie(p.kat);
           return '<div class="pravidelna-radek">' +
-            '<span><span>' + esc(k.ikona + ' ' + (p.nazev || k.nazev)) + '</span>' +
+            '<span><span class="rozpocet-jmeno">' + ik(k.ikona) +
+            esc(p.nazev || k.nazev) + '</span>' +
             '<span class="pravidelna-pod">každého ' + p.den + '. · ' + esc(D.ucet(p.ucet).nazev) +
             ' · ' + (p.typ === 'prijem' ? 'příjem' : 'výdaj') + '</span></span>' +
             '<span class="pravidelna-castka">' + esc(kc(p.castka)) + '</span>' +
@@ -521,11 +556,13 @@
   function dialogKategorie(id) {
     var s = D.stav();
     var k = id ? D.najdi(s.kategorie, id) : null;
+    volba = { ikona: k ? k.ikona : 'stitek', barva: k ? (k.barva || 1) : (s.kategorie.length % 8) + 1 };
     dialog({
       titulek: k ? 'Upravit kategorii' : 'Nová kategorie',
       telo:
         '<label>Název</label><input class="pole" id="d-nazev" value="' + esc(k ? k.nazev : '') + '" placeholder="např. Kadeřník">' +
-        '<label>Ikona</label><input class="pole" id="d-ikona" maxlength="4" value="' + esc(k ? k.ikona : '🏷️') + '">' +
+        '<label>Ikona</label>' + mrizkaIkon() +
+        '<label>Barva</label>' + radekBarev() +
         (k ? '' : '<label>Typ</label><select class="pole" id="d-typ"><option value="vydaj">Výdaj</option><option value="prijem">Příjem</option></select>') +
         (k ? '<button class="tl tl-nebezpeci tl-siroke" id="d-smaz">Smazat kategorii</button>' : ''),
       ano: 'Uložit',
@@ -533,12 +570,11 @@
       potvrd: function () {
         var nazev = $('d-nazev').value.trim();
         if (!nazev) { hlaska('Zadejte název.'); return false; }
-        var ikona = $('d-ikona').value.trim() || '🏷️';
-        if (k) { k.nazev = nazev; k.ikona = ikona; }
+        if (k) { k.nazev = nazev; k.ikona = volba.ikona; k.barva = volba.barva; }
         else {
           var typ = $('d-typ').value;
-          s.kategorie.push({ id: D.noveId('k'), nazev: nazev, ikona: ikona, typ: typ,
-            barva: (s.kategorie.length % 8) + 1 });
+          s.kategorie.push({ id: D.noveId('k'), nazev: nazev, ikona: volba.ikona, typ: typ,
+            barva: volba.barva });
           katTypVEditoru = typ;
         }
         D.ulozHned(); hlaska('Uloženo.'); return true;
@@ -569,11 +605,11 @@
   function dialogPravidelne() {
     var s = D.stav();
     var moznostiKat = D.kategorieTypu('vydaj').concat(D.kategorieTypu('prijem')).map(function (k) {
-      return '<option value="' + esc(k.id) + '">' + esc(k.ikona + ' ' + k.nazev) +
+      return '<option value="' + esc(k.id) + '">' + esc(k.nazev) +
         (k.typ === 'prijem' ? ' (příjem)' : '') + '</option>';
     }).join('');
     var moznostiUctu = s.ucty.map(function (u) {
-      return '<option value="' + esc(u.id) + '">' + esc(u.ikona + ' ' + u.nazev) + '</option>';
+      return '<option value="' + esc(u.id) + '">' + esc(u.nazev) + '</option>';
     }).join('');
     dialog({
       titulek: 'Pravidelná platba',
@@ -627,7 +663,13 @@
       ucet: vychoziUcet,
       ucetDo: s.ucty[1] ? s.ucty[1].id : s.ucty[0].id,
       datum: vybranyDenNeboDnesek(),
-      pozn: ''
+      pozn: '',
+      polozky: [],
+      rezimPolozek: false,
+      katProPolozku: null,
+      fotkaUrl: null,
+      fotkaBajty: null,
+      meloFotku: false
     };
     if (predloha) Object.assign(zaznam, predloha);
   }
@@ -649,7 +691,15 @@
       ucet: t.ucet,
       ucetDo: t.ucetDo || (s.ucty[1] ? s.ucty[1].id : s.ucty[0].id),
       datum: t.datum,
-      pozn: t.pozn || ''
+      pozn: t.pozn || '',
+      polozky: (t.polozky || []).map(function (p) {
+        return { nazev: p.nazev || '', castka: p.castka, kat: p.kat };
+      }),
+      rezimPolozek: !!(t.polozky && t.polozky.length),
+      katProPolozku: null,
+      fotkaUrl: null,
+      fotkaBajty: null,
+      meloFotku: !!t.fotka
     };
     if (t.typ === 'vydaj' || t.typ === 'prijem') zaznam.kat[t.typ] = t.kat;
     ['vydaj', 'prijem'].forEach(function (typ) {
@@ -671,11 +721,23 @@
       return '<button class="rychla" data-rychla="' + c + '">+' + cislo(c) + '</button>';
     }).join('');
     obnovTypZaznamu();
+    vykresliUctenku();
     $('prekryv-zaznam').hidden = false;
-    setTimeout(function () { $('pole-castka').focus(); }, 120);
+    if (!zaznam.rezimPolozek) setTimeout(function () { $('pole-castka').focus(); }, 120);
+
+    // uloženou účtenku doneseme až po otevření, ať se list neopozdí
+    if (zaznam.meloFotku && zaznam.id) {
+      var proId = zaznam.id;
+      D.nactiFotku(proId).then(function (bajty) {
+        if (!zaznam || zaznam.id !== proId || !bajty) return;
+        zaznam.fotkaUrl = bajtyNaUrl(bajty);
+        vykresliUctenku();
+      }).catch(function () { /* fotka nešla přečíst */ });
+    }
   }
 
   function zavriZaznam() {
+    zapomenFotku();
     $('prekryv-zaznam').hidden = true;
     zaznam = null;
   }
@@ -686,34 +748,58 @@
       b.classList.toggle('prep-akt', b.getAttribute('data-typ') === typ);
     });
     var jePrevod = (typ === 'prevod');
-    $('skupina-kategorie').hidden = jePrevod;
+    var proPolozku = (zaznam.katProPolozku !== null && zaznam.katProPolozku !== undefined);
+    // při rozepsaném nákupu se kategorie vybírá u položek, ne u celku
+    var ukazKategorie = !jePrevod && (proPolozku || !zaznam.rezimPolozek);
+
+    $('skupina-kategorie').hidden = !ukazKategorie;
     $('skupina-ucet-do').hidden = !jePrevod;
     $('popis-ucet').textContent = jePrevod ? 'Odkud' : 'Účet';
+    $('popis-kategorie').textContent = proPolozku ? 'Kategorie položky' : 'Kategorie';
 
-    if (!jePrevod) {
+    if (ukazKategorie) {
+      var vybrana = proPolozku
+        ? (zaznam.polozky[zaznam.katProPolozku] || {}).kat
+        : zaznam.kat[typ];
       $('vyber-kategorie').innerHTML = D.kategorieTypu(typ).map(function (k) {
-        return '<button class="kat-tl' + (k.id === zaznam.kat[typ] ? ' vybrano' : '') +
-          '" data-vyberkat="' + esc(k.id) + '"><span>' + esc(k.ikona) +
-          '</span><span>' + esc(k.nazev) + '</span></button>';
+        return '<button class="kat-tl' + (k.id === vybrana ? ' vybrano' : '') +
+          '" data-vyberkat="' + esc(k.id) + '" style="--kat-barva:' + G.barva(k.barva) + '">' +
+          ik(k.ikona) + '<span>' + esc(k.nazev) + '</span></button>';
       }).join('');
     }
+    vykresliPolozky();
     var ucty = D.stav().ucty;
     $('vyber-uctu').innerHTML = ucty.map(function (u) {
       return '<button class="chip' + (u.id === zaznam.ucet ? ' chip-akt' : '') +
-        '" data-vyberucet="' + esc(u.id) + '">' + esc(u.ikona + ' ' + u.nazev) + '</button>';
+        '" data-vyberucet="' + esc(u.id) + '">' + ik(u.ikona) + esc(u.nazev) + '</button>';
     }).join('');
     $('vyber-uctu-do').innerHTML = ucty.map(function (u) {
       return '<button class="chip' + (u.id === zaznam.ucetDo ? ' chip-akt' : '') +
-        '" data-vyberucetdo="' + esc(u.id) + '">' + esc(u.ikona + ' ' + u.nazev) + '</button>';
+        '" data-vyberucetdo="' + esc(u.id) + '">' + ik(u.ikona) + esc(u.nazev) + '</button>';
     }).join('');
   }
 
   function ulozZaznam() {
-    var castka = parsujCastku($('pole-castka').value);
-    if (!(castka > 0)) { hlaska('Zadejte částku větší než nula.'); $('pole-castka').focus(); return; }
-    castka = Math.round(castka * 100) / 100;
-
     var typ = zaznam.typ;
+    var polozky = null;
+    var castka;
+
+    if (zaznam.rezimPolozek && typ !== 'prevod') {
+      sesbirejPolozky();
+      polozky = zaznam.polozky.filter(function (p) { return p.castka > 0; });
+      if (!polozky.length) {
+        hlaska('Vyplňte aspoň jednu položku s částkou.'); return;
+      }
+      polozky = polozky.map(function (p) {
+        return { nazev: p.nazev || '', castka: p.castka, kat: p.kat || zaznam.kat[typ] };
+      });
+      castka = Math.round(D.soucetPolozek(polozky) * 100) / 100;
+    } else {
+      castka = parsujCastku($('pole-castka').value);
+      if (!(castka > 0)) { hlaska('Zadejte částku větší než nula.'); $('pole-castka').focus(); return; }
+      castka = Math.round(castka * 100) / 100;
+    }
+
     var datum = $('pole-datum').value || D.dnesISO();
     var pozn = $('pole-pozn').value.trim();
 
@@ -721,20 +807,41 @@
       hlaska('Vyberte dva různé účty.'); return;
     }
 
+    // hlavní kategorie = ta s největší položkou, ať má záznam kam patřit
+    var hlavniKat = zaznam.kat[typ];
+    if (polozky && polozky.length) {
+      hlavniKat = polozky.reduce(function (a, p) {
+        return (!a || p.castka > a.castka) ? p : a;
+      }, null).kat;
+    }
+
     var data = {
       datum: datum, castka: castka, typ: typ,
-      kat: typ === 'prevod' ? null : zaznam.kat[typ],
+      kat: typ === 'prevod' ? null : hlavniKat,
       ucet: zaznam.ucet,
       ucetDo: typ === 'prevod' ? zaznam.ucetDo : null,
-      pozn: pozn
+      pozn: pozn,
+      polozky: polozky && polozky.length ? polozky : null,
+      fotka: !!(zaznam.fotkaBajty || (zaznam.meloFotku && zaznam.fotkaUrl))
     };
 
+    var idZaznamu;
     if (zaznam.id) {
+      idZaznamu = zaznam.id;
       D.upravTransakci(zaznam.id, data);
       hlaska('Změny uloženy.');
     } else {
-      D.pridejTransakci(data);
+      idZaznamu = D.pridejTransakci(data).id;
       hlaska(typ === 'prijem' ? 'Příjem zapsán.' : (typ === 'prevod' ? 'Převod zapsán.' : 'Výdaj zapsán.'));
+    }
+
+    // účtenka
+    if (zaznam.fotkaBajty) {
+      D.ulozFotku(idZaznamu, zaznam.fotkaBajty).catch(function () {
+        hlaska('Účtenku se nepovedlo uložit.');
+      });
+    } else if (zaznam.meloFotku && !zaznam.fotkaUrl) {
+      D.smazFotku(idZaznamu);
     }
 
     // zapamatuj poslední volbu
@@ -796,6 +903,199 @@
   }
 
   /* =================================================================
+     GRAFY
+     ================================================================= */
+
+  function vykresliGrafy() {
+    var vM = D.vMesici(rok, mesic);
+    var dnes = new Date();
+    var jeAktualni = (dnes.getFullYear() === rok && dnes.getMonth() === mesic);
+    var poslDen = new Date(rok, mesic + 1, 0).getDate();
+    var doDne = jeAktualni ? dnes.getDate() : poslDen;
+
+    $('graf-dny').innerHTML = G.sloupceDnu(D.dennitrata(rok, mesic),
+      jeAktualni ? dnes.getDate() : 0, kc);
+    $('graf-kumulativne').innerHTML = G.caraKumulativne(D.kumulativne(rok, mesic), doDne, kc);
+    $('graf-tyden').innerHTML = G.sloupceTydne(D.podleDneVTydnu(rok, mesic), kc);
+    $('graf-zustatek').innerHTML = G.caraZustatku(D.zustatkyMesicu(rok, mesic, 12), kc);
+
+    var ucty = D.podleUctu(vM);
+    $('ucty-prazdno').hidden = ucty.length > 0;
+    $('graf-ucty').innerHTML = ucty.length ? G.seznamKategorii(ucty, kc) : '';
+
+    var prijmy = D.podleKategorii(vM, 'prijem');
+    $('prijmy-prazdno').hidden = prijmy.length > 0;
+    $('graf-prijmy').innerHTML = prijmy.length ? G.seznamKategorii(prijmy, kc) : '';
+  }
+
+  /* =================================================================
+     VÝBĚR IKONY A BARVY
+     ================================================================= */
+
+  var volba = { ikona: 'stitek', barva: 1 };
+
+  function mrizkaIkon() {
+    return '<div class="ikony-mrizka">' + global.FIkony.NABIDKA.map(function (kl) {
+      return '<button type="button" class="ikona-tl' + (kl === volba.ikona ? ' vybrano' : '') +
+        '" data-ikona-volba="' + kl + '" aria-label="' + kl + '">' + ik(kl) + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function radekBarev() {
+    var html = '<div class="barvy-radek">';
+    for (var i = 1; i <= 8; i++) {
+      html += '<button type="button" class="barva-tl' + (i === volba.barva ? ' vybrano' : '') +
+        '" data-barva-volba="' + i + '" style="background:' + G.barva(i) +
+        '" aria-label="Barva ' + i + '"></button>';
+    }
+    return html + '</div>';
+  }
+
+  function klikVeVyberuIkony(e) {
+    var i = e.target.closest('[data-ikona-volba]');
+    if (i) {
+      volba.ikona = i.getAttribute('data-ikona-volba');
+      vse('[data-ikona-volba]', $('dialog-telo')).forEach(function (b) {
+        b.classList.toggle('vybrano', b === i);
+      });
+      return;
+    }
+    var b = e.target.closest('[data-barva-volba]');
+    if (b) {
+      volba.barva = Number(b.getAttribute('data-barva-volba'));
+      vse('[data-barva-volba]', $('dialog-telo')).forEach(function (x) {
+        x.classList.toggle('vybrano', x === b);
+      });
+    }
+  }
+
+  /* =================================================================
+     POLOŽKY NÁKUPU
+     ================================================================= */
+
+  function vykresliPolozky() {
+    var jePrevod = (zaznam.typ === 'prevod');
+    var rezim = !!zaznam.rezimPolozek && !jePrevod;
+
+    $('tl-polozky').hidden = rezim || jePrevod;
+    $('polozky-blok').hidden = !rezim;
+    $('pole-castka').readOnly = rezim;
+    // v režimu položek se částka počítá, rychlá tlačítka by mátla
+    $('rychle-castky').hidden = rezim;
+
+    if (!rezim) { $('polozky-soucet').textContent = ''; return; }
+
+    var vychoziKat = zaznam.kat[zaznam.typ];
+    $('seznam-polozek').innerHTML = zaznam.polozky.map(function (p, i) {
+      var k = D.kategorie(p.kat || vychoziKat);
+      return '<div class="polozka-radek">' +
+        '<button type="button" class="polozka-kat" data-polozka-kat="' + i +
+          '" style="color:' + G.barva(k.barva) + '" aria-label="Kategorie položky">' +
+          ik(k.ikona) + '</button>' +
+        '<input class="pole" data-polozka-nazev="' + i + '" value="' + esc(p.nazev || '') +
+          '" placeholder="co to bylo" autocomplete="off">' +
+        '<input class="pole polozka-castka-pole" inputmode="decimal" data-polozka-castka="' + i +
+          '" value="' + (p.castka ? esc(String(p.castka)) : '') + '" placeholder="0">' +
+        '<button type="button" class="polozka-pryc" data-polozka-pryc="' + i +
+          '" aria-label="Odebrat položku">' + ik('ui-zavrit') + '</button>' +
+      '</div>';
+    }).join('');
+
+    var soucet = D.soucetPolozek(zaznam.polozky);
+    $('polozky-soucet').textContent = soucet ? kc(soucet) : '';
+    $('pole-castka').value = soucet ? String(Math.round(soucet * 100) / 100) : '';
+  }
+
+  function zapnuPolozky() {
+    zaznam.rezimPolozek = true;
+    if (!zaznam.polozky.length) {
+      var start = parsujCastku($('pole-castka').value);
+      zaznam.polozky = [
+        { nazev: '', castka: isNaN(start) || !start ? '' : start, kat: zaznam.kat[zaznam.typ] },
+        { nazev: '', castka: '', kat: zaznam.kat[zaznam.typ] }
+      ];
+    }
+    obnovTypZaznamu();
+  }
+
+  function vypniPolozky() {
+    var soucet = D.soucetPolozek(zaznam.polozky);
+    zaznam.rezimPolozek = false;
+    zaznam.polozky = [];
+    obnovTypZaznamu();
+    $('pole-castka').value = soucet ? String(Math.round(soucet * 100) / 100) : '';
+  }
+
+  function sesbirejPolozky() {
+    vse('[data-polozka-nazev]').forEach(function (el) {
+      var i = Number(el.getAttribute('data-polozka-nazev'));
+      if (zaznam.polozky[i]) zaznam.polozky[i].nazev = el.value.trim();
+    });
+    vse('[data-polozka-castka]').forEach(function (el) {
+      var i = Number(el.getAttribute('data-polozka-castka'));
+      if (!zaznam.polozky[i]) return;
+      var c = parsujCastku(el.value);
+      zaznam.polozky[i].castka = isNaN(c) ? 0 : Math.round(c * 100) / 100;
+    });
+  }
+
+  /* =================================================================
+     ÚČTENKA
+     ================================================================= */
+
+  var MAX_HRANA = 1400;
+
+  /** Zmenší a překóduje fotku, ať účtenky nenafouknou úložiště. */
+  function zmensObrazek(soubor) {
+    return new Promise(function (splnit, zamitnout) {
+      var url = URL.createObjectURL(soubor);
+      var obr = new Image();
+      obr.onload = function () {
+        var nejvetsi = Math.max(obr.width, obr.height);
+        var k = nejvetsi > MAX_HRANA ? MAX_HRANA / nejvetsi : 1;
+        var platno = document.createElement('canvas');
+        platno.width = Math.max(1, Math.round(obr.width * k));
+        platno.height = Math.max(1, Math.round(obr.height * k));
+        platno.getContext('2d').drawImage(obr, 0, 0, platno.width, platno.height);
+        URL.revokeObjectURL(url);
+        platno.toBlob(function (blob) {
+          if (!blob) { zamitnout(new Error('bez dat')); return; }
+          if (blob.arrayBuffer) blob.arrayBuffer().then(splnit, zamitnout);
+          else {
+            var ctecka = new FileReader();
+            ctecka.onload = function () { splnit(ctecka.result); };
+            ctecka.onerror = zamitnout;
+            ctecka.readAsArrayBuffer(blob);
+          }
+        }, 'image/jpeg', 0.72);
+      };
+      obr.onerror = function () { URL.revokeObjectURL(url); zamitnout(new Error('nelze načíst')); };
+      obr.src = url;
+    });
+  }
+
+  function bajtyNaUrl(bajty) {
+    return URL.createObjectURL(new Blob([bajty], { type: 'image/jpeg' }));
+  }
+
+  function vykresliUctenku() {
+    var obal = $('uctenka-obal');
+    if (zaznam.fotkaUrl) {
+      obal.innerHTML = '<div class="uctenka-nahled">' +
+        '<img src="' + zaznam.fotkaUrl + '" alt="Účtenka" data-uctenka-velka="1">' +
+        '<button type="button" class="uctenka-pryc" data-uctenka-pryc="1" ' +
+        'aria-label="Odebrat účtenku">' + ik('ui-zavrit') + '</button></div>';
+    } else {
+      obal.innerHTML = '<button type="button" class="uctenka-pridat" data-uctenka-pridat="1">' +
+        ik('ui-fotoaparat') + ' Vyfotit nebo vybrat účtenku</button>';
+    }
+  }
+
+  function zapomenFotku() {
+    if (zaznam && zaznam.fotkaUrl) { try { URL.revokeObjectURL(zaznam.fotkaUrl); } catch (e) { /* ok */ } }
+  }
+
+  /* =================================================================
      ŠABLONY – dlouhý stisk na +
      ================================================================= */
 
@@ -831,8 +1131,9 @@
     }
     $('seznam-sablon').innerHTML = seznam.map(function (s, i) {
       return '<button class="sablona" data-sablona="' + i + '">' +
-        '<span class="sablona-ikona" style="background:color-mix(in srgb,' + G.barva(s.barva) +
-          ' 18%, var(--surface-2))">' + esc(s.ikona) + '</span>' +
+        '<span class="sablona-ikona" style="color:' + G.barva(s.barva) +
+          ';background:color-mix(in srgb,' + G.barva(s.barva) + ' 18%, var(--surface-2))">' +
+          ik(s.ikona) + '</span>' +
         '<span><span class="sablona-nazev">' + esc(s.nazev) + '</span>' +
         '<span class="sablona-pod">' + esc(D.ucet(s.ucet).nazev) + ' · zapsáno ' + s.pocet + '×</span></span>' +
         '<span class="sablona-castka ' + (s.typ === 'prijem' ? 'prijem' : 'vydaj') + '">' +
@@ -1068,7 +1369,16 @@
     naSlys($('vyber-kategorie'), 'click', function (e) {
       var b = e.target.closest('[data-vyberkat]');
       if (!b || !zaznam) return;
-      zaznam.kat[zaznam.typ] = b.getAttribute('data-vyberkat');
+      var vybrana = b.getAttribute('data-vyberkat');
+      if (zaznam.katProPolozku !== null && zaznam.katProPolozku !== undefined) {
+        sesbirejPolozky();
+        if (zaznam.polozky[zaznam.katProPolozku]) {
+          zaznam.polozky[zaznam.katProPolozku].kat = vybrana;
+        }
+        zaznam.katProPolozku = null;
+      } else {
+        zaznam.kat[zaznam.typ] = vybrana;
+      }
       obnovTypZaznamu();
     });
     naSlys($('vyber-uctu'), 'click', function (e) {
@@ -1100,6 +1410,100 @@
     });
     naSlys($('dialog-ne'), 'click', zavriDialog);
     naSlys($('dialog-telo'), 'click', klikVeVyberuMesice);
+    naSlys($('dialog-telo'), 'click', klikVeVyberuIkony);
+
+    // položky nákupu
+    naSlys($('tl-polozky'), 'click', function () { if (zaznam) zapnuPolozky(); });
+    naSlys($('tl-zrusit-polozky'), 'click', function () { if (zaznam) vypniPolozky(); });
+    naSlys($('tl-pridat-polozku'), 'click', function () {
+      if (!zaznam) return;
+      sesbirejPolozky();
+      zaznam.polozky.push({ nazev: '', castka: '', kat: zaznam.kat[zaznam.typ] });
+      vykresliPolozky();
+      var pole = vse('[data-polozka-nazev]');
+      if (pole.length) pole[pole.length - 1].focus();
+    });
+    naSlys($('seznam-polozek'), 'click', function (e) {
+      if (!zaznam) return;
+      var kat = e.target.closest('[data-polozka-kat]');
+      if (kat) {
+        sesbirejPolozky();
+        zaznam.katProPolozku = Number(kat.getAttribute('data-polozka-kat'));
+        obnovTypZaznamu();
+        $('skupina-kategorie').scrollIntoView({ block: 'nearest' });
+        return;
+      }
+      var pryc = e.target.closest('[data-polozka-pryc]');
+      if (pryc) {
+        sesbirejPolozky();
+        zaznam.polozky.splice(Number(pryc.getAttribute('data-polozka-pryc')), 1);
+        if (!zaznam.polozky.length) {
+          zaznam.polozky.push({ nazev: '', castka: '', kat: zaznam.kat[zaznam.typ] });
+        }
+        vykresliPolozky();
+      }
+    });
+    naSlys($('seznam-polozek'), 'input', function (e) {
+      if (!zaznam || !e.target.hasAttribute('data-polozka-castka')) return;
+      sesbirejPolozky();
+      var soucet = D.soucetPolozek(zaznam.polozky);
+      $('polozky-soucet').textContent = soucet ? kc(soucet) : '';
+      $('pole-castka').value = soucet ? String(Math.round(soucet * 100) / 100) : '';
+    });
+
+    // účtenka
+    naSlys($('uctenka-obal'), 'click', function (e) {
+      if (!zaznam) return;
+      if (e.target.closest('[data-uctenka-pridat]')) { $('pole-fotka').click(); return; }
+      if (e.target.closest('[data-uctenka-pryc]')) {
+        zapomenFotku();
+        zaznam.fotkaUrl = null;
+        zaznam.fotkaBajty = null;
+        vykresliUctenku();
+        return;
+      }
+      if (e.target.closest('[data-uctenka-velka]')) ukazFotku(zaznam.fotkaUrl);
+    });
+    naSlys($('pole-fotka'), 'change', function () {
+      var soubor = this.files && this.files[0];
+      this.value = '';
+      if (!soubor || !zaznam) return;
+      hlaska('Zpracovávám fotku…');
+      zmensObrazek(soubor).then(function (bajty) {
+        if (!zaznam) return;
+        zapomenFotku();
+        zaznam.fotkaBajty = bajty;
+        zaznam.fotkaUrl = bajtyNaUrl(bajty);
+        vykresliUctenku();
+        hlaska('Účtenka připravena, uloží se se záznamem.');
+      }).catch(function () { hlaska('Fotku se nepovedlo načíst.'); });
+    });
+    naSlys($('fotka-zavrit'), 'click', schovejFotku);
+    naSlys($('prekryv-fotka'), 'click', function (e) {
+      if (e.target === $('prekryv-fotka')) schovejFotku();
+    });
+
+    // grafy
+    naSlys($('graf-ucty'), 'click', function (e) {
+      var b = e.target.closest('[data-kat]');
+      if (!b) return;
+      filtr.ucet = b.getAttribute('data-kat');
+      filtr.typ = 'vydaj'; filtr.rozsah = 'mesic'; filtr.kat = null; filtr.text = '';
+      obnovChipy();
+      jdi('historie');
+    });
+    naSlys($('graf-prijmy'), 'click', function (e) {
+      var b = e.target.closest('[data-kat]');
+      if (!b || b.getAttribute('data-kat') === '__ostatni') return;
+      filtr.kat = b.getAttribute('data-kat');
+      filtr.typ = 'prijem'; filtr.rozsah = 'mesic'; filtr.ucet = null; filtr.text = '';
+      obnovChipy();
+      jdi('historie');
+    });
+    naSlys($('graf-dny'), 'click', function (e) {
+      var b = e.target.closest('[data-den]');
+      if (b) hlaska(b.getAttribute('title'));
+    });
     naSlys($('prekryv-dialog'), 'click', function (e) {
       if (e.target === $('prekryv-dialog')) zavriDialog();
     });
@@ -1279,7 +1683,9 @@
     // klávesa Escape
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Escape') return;
-      if (!$('prekryv-dialog').hidden) zavriDialog();
+      if (!$('prekryv-fotka').hidden) schovejFotku();
+      else if (!$('prekryv-dialog').hidden) zavriDialog();
+      else if (!$('prekryv-sablony').hidden) $('prekryv-sablony').hidden = true;
       else if (!$('prekryv-zaznam').hidden) zavriZaznam();
     });
   }
@@ -1291,6 +1697,17 @@
     if (!t) return;
     zalozZTransakce(t);
     otevriZaznam();
+  }
+
+  function ukazFotku(url) {
+    if (!url) return;
+    $('fotka-velka').src = url;
+    $('prekryv-fotka').hidden = false;
+  }
+
+  function schovejFotku() {
+    $('prekryv-fotka').hidden = true;
+    $('fotka-velka').removeAttribute('src');
   }
 
   function rozsahDoHistorie(r) {
@@ -1380,6 +1797,7 @@
     var pridano = D.dopisPravidelne();
 
     if (!zapojeno) { zapojUdalosti(); zapojeno = true; }
+    doplnIkony();
     obnovChipy();
     jdi('prehled');
 

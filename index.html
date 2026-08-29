@@ -17,9 +17,9 @@
 
 <header class="hlavicka" id="hlavicka">
   <div class="hlavicka-radek">
-    <button class="mesic-sip" id="mesic-zpet" aria-label="Předchozí měsíc">‹</button>
+    <button class="mesic-sip" id="mesic-zpet" aria-label="Předchozí měsíc" data-ikona="ui-vlevo"></button>
     <button class="mesic-nazev" id="mesic-nazev" aria-label="Vybrat měsíc">Srpen 2026</button>
-    <button class="mesic-sip" id="mesic-vpred" aria-label="Následující měsíc">›</button>
+    <button class="mesic-sip" id="mesic-vpred" aria-label="Následující měsíc" data-ikona="ui-vpravo"></button>
   </div>
 </header>
 
@@ -91,6 +91,7 @@
     <div class="karta">
       <div class="karta-hlava">
         <h2>Posledních 6 měsíců</h2>
+        <button class="odkaz" data-jdi="grafy">Víc grafů →</button>
       </div>
       <div id="graf-mesice"></div>
     </div>
@@ -141,8 +142,48 @@
     <p class="napoveda">Zůstatek účtu = počáteční stav + příjmy − výdaje − odchozí převody + příchozí převody.</p>
   </section>
 
+  <!-- ============ GRAFY ============ -->
+  <section class="pohled" id="pohled-grafy" hidden>
+    <div class="karta">
+      <div class="karta-hlava"><h2>Útrata den po dni</h2></div>
+      <div id="graf-dny"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Narůstající útrata proti minulému měsíci</h2></div>
+      <div id="graf-kumulativne"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Ve který den v týdnu utrácíte</h2></div>
+      <div id="graf-tyden"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Vývoj zůstatku (12 měsíců)</h2></div>
+      <div id="graf-zustatek"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Odkud peníze odcházejí</h2></div>
+      <div id="graf-ucty" class="kat-seznam"></div>
+      <p class="prazdno" id="ucty-prazdno" hidden>V tomto měsíci zatím žádný výdaj.</p>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Odkud peníze přicházejí</h2></div>
+      <div id="graf-prijmy" class="kat-seznam"></div>
+      <p class="prazdno" id="prijmy-prazdno" hidden>V tomto měsíci zatím žádný příjem.</p>
+    </div>
+  </section>
+
   <!-- ============ VÍC ============ -->
   <section class="pohled" id="pohled-nastaveni" hidden>
+
+    <button class="tl tl-siroke tl-radek" style="margin-top:0" data-jdi="grafy">
+      <span id="ikona-grafy"></span> Grafy a rozbory
+    </button>
+
 
     <div class="karta">
       <div class="karta-hlava"><h2>Rozpočty na měsíc</h2></div>
@@ -208,11 +249,11 @@
 </main>
 
 <nav class="spodni" id="spodni">
-  <button class="nav-tl nav-akt" data-jdi="prehled"><span class="nav-ikona">◎</span><span>Přehled</span></button>
-  <button class="nav-tl" data-jdi="historie"><span class="nav-ikona">≡</span><span>Historie</span></button>
-  <button class="nav-plus" id="tl-pridat" aria-label="Přidat záznam">+</button>
-  <button class="nav-tl" data-jdi="ucty"><span class="nav-ikona">▤</span><span>Účty</span></button>
-  <button class="nav-tl" data-jdi="nastaveni"><span class="nav-ikona">⚙</span><span>Víc</span></button>
+  <button class="nav-tl nav-akt" data-jdi="prehled"><span class="nav-ikona" data-ikona="ui-prehled"></span><span>Přehled</span></button>
+  <button class="nav-tl" data-jdi="historie"><span class="nav-ikona" data-ikona="ui-historie"></span><span>Historie</span></button>
+  <button class="nav-plus" id="tl-pridat" aria-label="Přidat záznam" data-ikona="ui-plus"></button>
+  <button class="nav-tl" data-jdi="ucty"><span class="nav-ikona" data-ikona="ui-ucty"></span><span>Účty</span></button>
+  <button class="nav-tl" data-jdi="nastaveni"><span class="nav-ikona" data-ikona="ui-vic"></span><span>Víc</span></button>
 </nav>
 
 <!-- ============ FORMULÁŘ ZÁZNAMU ============ -->
@@ -236,8 +277,23 @@
       </div>
       <div class="rychle-castky" id="rychle-castky"></div>
 
+      <button class="tl tl-siroke tl-radek" id="tl-polozky" style="margin-top:0">
+        <span data-ikona="ui-historie"></span> Rozepsat na položky
+      </button>
+
+      <div class="skupina" id="polozky-blok" hidden>
+        <div class="skupina-nadpis">
+          Položky nákupu <span class="skupina-doplnek" id="polozky-soucet"></span>
+        </div>
+        <div id="seznam-polozek"></div>
+        <div class="tlacitka-radek" style="margin-top:9px">
+          <button class="tl" id="tl-pridat-polozku">+ Přidat položku</button>
+          <button class="tl" id="tl-zrusit-polozky">Zpět na jednu částku</button>
+        </div>
+      </div>
+
       <div class="skupina" id="skupina-kategorie">
-        <div class="skupina-nadpis">Kategorie</div>
+        <div class="skupina-nadpis" id="popis-kategorie">Kategorie</div>
         <div class="kat-mrizka" id="vyber-kategorie"></div>
       </div>
 
@@ -260,6 +316,12 @@
         <span>Poznámka</span>
         <input type="text" id="pole-pozn" class="pole" placeholder="např. nákup Lidl, benzín, oběd" autocomplete="off">
       </label>
+
+      <div class="skupina" id="skupina-uctenka">
+        <div class="skupina-nadpis">Účtenka</div>
+        <div id="uctenka-obal"></div>
+        <input type="file" id="pole-fotka" accept="image/*" capture="environment" hidden>
+      </div>
 
       <button class="tl tl-nebezpeci tl-siroke" id="zaznam-smazat" hidden>Smazat záznam</button>
     </div>
@@ -294,12 +356,18 @@
   </div>
 </div>
 
+<!-- ============ PROHLÍŽEČ ÚČTENKY ============ -->
+<div class="prekryv prekryv-fotka" id="prekryv-fotka" hidden>
+  <img id="fotka-velka" alt="Účtenka">
+  <button class="fotka-zavrit" id="fotka-zavrit" aria-label="Zavřít" data-ikona="ui-zavrit"></button>
+</div>
+
 <div class="hlaska" id="hlaska" hidden></div>
 
 <!-- ============ ZÁMEK ============ -->
 <div class="zamek" id="zamek" hidden>
   <div class="zamek-vnitrek" id="zamek-vnitrek">
-    <div class="zamek-znak">🔒</div>
+    <div class="zamek-znak" data-ikona="ui-zamek"></div>
     <h1 class="zamek-nadpis" id="zamek-nadpis">Moje finance</h1>
     <p class="zamek-popis" id="zamek-popis">Zadejte PIN</p>
     <div class="zamek-tecky" id="zamek-tecky"></div>
@@ -312,6 +380,7 @@
   </div>
 </div>
 
+<script src="js/ikony.js"></script>
 <script src="js/data.js"></script>
 <script src="js/grafy.js"></script>
 <script src="js/zamek.js"></script>

@@ -124,6 +124,22 @@
         var o = JSON.parse(text);
         return global.crypto.subtle.decrypt({ name: 'AES-GCM', iv: zB64(o.iv) }, dek, zB64(o.data))
           .then(zBajtu);
+      },
+      // fotky účtenek: iv se lepí na začátek, ať je to jeden kus dat
+      zasifrujBin: function (bajty) {
+        var iv = nahodne(12);
+        return global.crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, dek, bajty)
+          .then(function (buf) {
+            var vysledek = new Uint8Array(12 + buf.byteLength);
+            vysledek.set(iv, 0);
+            vysledek.set(new Uint8Array(buf), 12);
+            return vysledek.buffer;
+          });
+      },
+      desifrujBin: function (bajty) {
+        var b = new Uint8Array(bajty);
+        return global.crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.subarray(0, 12) },
+          dek, b.subarray(12));
       }
     };
   }
@@ -177,7 +193,10 @@
   function zalozTrezor(pin) {
     var sul = nahodne(16);
     var stav = D.stav() || D.nacti();
-    return Promise.all([novyDek(), klicZPinu(pin, sul, ITERACI)])
+    var fotkyPredtim = null;
+    return D.vsechnyFotky()
+      .then(function (f) { fotkyPredtim = f; })
+      .then(function () { return Promise.all([novyDek(), klicZPinu(pin, sul, ITERACI)]); })
       .then(function (dvojice) {
         dek = dvojice[0];
         return zabal(dek, dvojice[1]);
@@ -195,6 +214,8 @@
       .then(function () {
         D.smazPlain();
         zamceno = false;
+        // účtenky nasbírané před zapnutím zámku dozašifrujeme
+        return D.prepisFotky(fotkyPredtim || []);
       });
   }
 
@@ -264,11 +285,15 @@
   function vypniZamek() {
     var stav = D.stav();
     stav.nastaveni.bezZamku = true;
-    D.nastavSifru(null);
-    return D.ulozHned().then(function () {
-      D.smazTrezor();
-      obalka = null;
-      dek = null;
+    // fotky je nutné přečíst ještě starou šifrou, jinak by zůstaly nečitelné
+    return D.vsechnyFotky().then(function (fotky) {
+      D.nastavSifru(null);
+      return D.ulozHned().then(function () {
+        D.smazTrezor();
+        obalka = null;
+        dek = null;
+        return D.prepisFotky(fotky);
+      });
     });
   }
 
@@ -325,18 +350,21 @@
     }
     $('zamek-tecky').innerHTML = tecky;
 
+    var ik = global.FIkony;
     var vlevo = nastavuje
-      ? '<button class="kl-tl kl-vedlejsi" data-kl="ok" ' +
-          (zadano.length >= DELKA_MIN ? '' : 'disabled') + '>✓</button>'
+      ? '<button class="kl-tl kl-vedlejsi" data-kl="ok" aria-label="Potvrdit" ' +
+          (zadano.length >= DELKA_MIN ? '' : 'disabled') + '>' + ik.svg('ui-ok') + '</button>'
       : (maBiometriku()
-          ? '<button class="kl-tl kl-vedlejsi" data-kl="bio" aria-label="Odemknout otiskem">☝</button>'
+          ? '<button class="kl-tl kl-vedlejsi" data-kl="bio" aria-label="Odemknout otiskem">' +
+            ik.svg('ui-otisk') + '</button>'
           : '<span></span>');
 
     var html = '';
     for (var c = 1; c <= 9; c++) html += '<button class="kl-tl" data-kl="' + c + '">' + c + '</button>';
     html += vlevo;
     html += '<button class="kl-tl" data-kl="0">0</button>';
-    html += '<button class="kl-tl kl-vedlejsi" data-kl="zpet" aria-label="Smazat">⌫</button>';
+    html += '<button class="kl-tl kl-vedlejsi" data-kl="zpet" aria-label="Smazat">' +
+      ik.svg('ui-backspace') + '</button>';
     $('klavesnice').innerHTML = html;
   }
 

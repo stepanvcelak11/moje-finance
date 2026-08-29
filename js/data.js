@@ -17,41 +17,61 @@
 
   var VYCHOZI_KATEGORIE = [
     // výdaje
-    { id: 'k-potraviny', nazev: 'Potraviny', ikona: '🛒', typ: 'vydaj', barva: 1 },
-    { id: 'k-restaurace', nazev: 'Jídlo venku', ikona: '🍽️', typ: 'vydaj', barva: 2 },
-    { id: 'k-bydleni', nazev: 'Bydlení', ikona: '🏠', typ: 'vydaj', barva: 3 },
-    { id: 'k-energie', nazev: 'Energie', ikona: '💡', typ: 'vydaj', barva: 4 },
-    { id: 'k-doprava', nazev: 'Doprava', ikona: '🚌', typ: 'vydaj', barva: 5 },
-    { id: 'k-auto', nazev: 'Auto', ikona: '🚗', typ: 'vydaj', barva: 6 },
-    { id: 'k-zdravi', nazev: 'Zdraví', ikona: '💊', typ: 'vydaj', barva: 7 },
-    { id: 'k-zabava', nazev: 'Zábava', ikona: '🎬', typ: 'vydaj', barva: 8 },
-    { id: 'k-obleceni', nazev: 'Oblečení', ikona: '👕', typ: 'vydaj', barva: 1 },
-    { id: 'k-domacnost', nazev: 'Domácnost', ikona: '🧻', typ: 'vydaj', barva: 2 },
-    { id: 'k-deti', nazev: 'Děti', ikona: '🧸', typ: 'vydaj', barva: 3 },
-    { id: 'k-sport', nazev: 'Sport', ikona: '🏋️', typ: 'vydaj', barva: 4 },
-    { id: 'k-cestovani', nazev: 'Cestování', ikona: '✈️', typ: 'vydaj', barva: 5 },
-    { id: 'k-darky', nazev: 'Dárky', ikona: '🎁', typ: 'vydaj', barva: 6 },
-    { id: 'k-poplatky', nazev: 'Poplatky', ikona: '🧾', typ: 'vydaj', barva: 7 },
-    { id: 'k-telefon', nazev: 'Telefon a net', ikona: '📱', typ: 'vydaj', barva: 8 },
-    { id: 'k-vzdelani', nazev: 'Vzdělání', ikona: '📚', typ: 'vydaj', barva: 1 },
-    { id: 'k-sporeni', nazev: 'Spoření', ikona: '🐖', typ: 'vydaj', barva: 3 },
-    { id: 'k-jine', nazev: 'Jiné', ikona: '❔', typ: 'vydaj', barva: 4 },
+    { id: 'k-potraviny', nazev: 'Potraviny', ikona: 'kosik', typ: 'vydaj', barva: 1 },
+    { id: 'k-restaurace', nazev: 'Jídlo venku', ikona: 'restaurace', typ: 'vydaj', barva: 2 },
+    { id: 'k-bydleni', nazev: 'Bydlení', ikona: 'dum', typ: 'vydaj', barva: 3 },
+    { id: 'k-energie', nazev: 'Energie', ikona: 'energie', typ: 'vydaj', barva: 4 },
+    { id: 'k-doprava', nazev: 'Doprava', ikona: 'autobus', typ: 'vydaj', barva: 5 },
+    { id: 'k-auto', nazev: 'Auto', ikona: 'auto', typ: 'vydaj', barva: 6 },
+    { id: 'k-zdravi', nazev: 'Zdraví', ikona: 'zdravi', typ: 'vydaj', barva: 7 },
+    { id: 'k-zabava', nazev: 'Zábava', ikona: 'zabava', typ: 'vydaj', barva: 8 },
+    { id: 'k-obleceni', nazev: 'Oblečení', ikona: 'obleceni', typ: 'vydaj', barva: 1 },
+    { id: 'k-domacnost', nazev: 'Domácnost', ikona: 'domacnost', typ: 'vydaj', barva: 2 },
+    { id: 'k-deti', nazev: 'Děti', ikona: 'deti', typ: 'vydaj', barva: 3 },
+    { id: 'k-sport', nazev: 'Sport', ikona: 'sport', typ: 'vydaj', barva: 4 },
+    { id: 'k-cestovani', nazev: 'Cestování', ikona: 'cestovani', typ: 'vydaj', barva: 5 },
+    { id: 'k-darky', nazev: 'Dárky', ikona: 'darek', typ: 'vydaj', barva: 6 },
+    { id: 'k-poplatky', nazev: 'Poplatky', ikona: 'poplatky', typ: 'vydaj', barva: 7 },
+    { id: 'k-telefon', nazev: 'Telefon a net', ikona: 'telefon', typ: 'vydaj', barva: 8 },
+    { id: 'k-vzdelani', nazev: 'Vzdělání', ikona: 'vzdelani', typ: 'vydaj', barva: 1 },
+    { id: 'k-sporeni', nazev: 'Spoření', ikona: 'sporeni', typ: 'vydaj', barva: 3 },
+    { id: 'k-jine', nazev: 'Jiné', ikona: 'jine', typ: 'vydaj', barva: 4 },
     // příjmy
-    { id: 'p-vyplata', nazev: 'Výplata', ikona: '💼', typ: 'prijem', barva: 3 },
-    { id: 'p-faktura', nazev: 'Faktura', ikona: '🧮', typ: 'prijem', barva: 1 },
-    { id: 'p-brigada', nazev: 'Brigáda', ikona: '🔧', typ: 'prijem', barva: 4 },
-    { id: 'p-prodej', nazev: 'Prodej', ikona: '📦', typ: 'prijem', barva: 2 },
-    { id: 'p-dar', nazev: 'Dar', ikona: '🎁', typ: 'prijem', barva: 5 },
-    { id: 'p-vratka', nazev: 'Vratka', ikona: '↩️', typ: 'prijem', barva: 7 },
-    { id: 'p-uroky', nazev: 'Úroky', ikona: '🏦', typ: 'prijem', barva: 6 },
-    { id: 'p-jine', nazev: 'Jiné', ikona: '❔', typ: 'prijem', barva: 8 }
+    { id: 'p-vyplata', nazev: 'Výplata', ikona: 'prace', typ: 'prijem', barva: 3 },
+    { id: 'p-faktura', nazev: 'Faktura', ikona: 'faktura', typ: 'prijem', barva: 1 },
+    { id: 'p-brigada', nazev: 'Brigáda', ikona: 'brigada', typ: 'prijem', barva: 4 },
+    { id: 'p-prodej', nazev: 'Prodej', ikona: 'prodej', typ: 'prijem', barva: 2 },
+    { id: 'p-dar', nazev: 'Dar', ikona: 'darek', typ: 'prijem', barva: 5 },
+    { id: 'p-vratka', nazev: 'Vratka', ikona: 'vratka', typ: 'prijem', barva: 7 },
+    { id: 'p-uroky', nazev: 'Úroky', ikona: 'banka', typ: 'prijem', barva: 6 },
+    { id: 'p-jine', nazev: 'Jiné', ikona: 'jine', typ: 'prijem', barva: 8 }
   ];
 
   var VYCHOZI_UCTY = [
-    { id: 'u-hotovost', nazev: 'Hotovost', ikona: '💵', pocatek: 0, barva: 4 },
-    { id: 'u-karta', nazev: 'Běžný účet', ikona: '💳', pocatek: 0, barva: 1 },
-    { id: 'u-sporici', nazev: 'Spořicí účet', ikona: '🐖', pocatek: 0, barva: 3 }
+    { id: 'u-hotovost', nazev: 'Hotovost', ikona: 'hotovost', pocatek: 0, barva: 4 },
+    { id: 'u-karta', nazev: 'Běžný účet', ikona: 'karta', pocatek: 0, barva: 1 },
+    { id: 'u-sporici', nazev: 'Spořicí účet', ikona: 'sporeni', pocatek: 0, barva: 3 }
   ];
+
+  /** Data z dob, kdy ikony byly emoji – převod na klíče vektorových ikon. */
+  var ZE_SMAJLIKU = {
+    '🛒': 'kosik', '🍽️': 'restaurace', '🍽': 'restaurace', '🏠': 'dum', '💡': 'energie',
+    '🚌': 'autobus', '🚗': 'auto', '💊': 'zdravi', '🎬': 'zabava', '👕': 'obleceni',
+    '🧻': 'domacnost', '🧸': 'deti', '🏋️': 'sport', '🏋': 'sport', '✈️': 'cestovani',
+    '✈': 'cestovani', '🎁': 'darek', '🧾': 'poplatky', '📱': 'telefon', '📚': 'vzdelani',
+    '🐖': 'sporeni', '❔': 'jine', '❓': 'jine', '💼': 'prace', '🧮': 'faktura',
+    '🔧': 'brigada', '📦': 'prodej', '↩️': 'vratka', '↩': 'vratka', '🏦': 'banka',
+    '💵': 'hotovost', '💳': 'karta', '🏷️': 'stitek', '🏷': 'stitek', '↔️': 'prevod',
+    '💰': 'penezenka', '🐷': 'sporeni', '⛽': 'palivo', '☕': 'kava', '🍺': 'pivo',
+    '🍕': 'pizza', '🎮': 'hry', '🎵': 'hudba', '📷': 'foto', '✂️': 'kadernik'
+  };
+
+  function ikonaNaKlic(ikona) {
+    var i = String(ikona || '');
+    if (global.FIkony && global.FIkony.existuje(i)) return i;
+    if (ZE_SMAJLIKU[i]) return ZE_SMAJLIKU[i];
+    return 'stitek';
+  }
 
   function vychoziStav() {
     return {
@@ -139,6 +159,9 @@
     } catch (e) {
       stav = z;
     }
+    // starší data měla místo ikon emoji
+    stav.kategorie.forEach(function (k) { k.ikona = ikonaNaKlic(k.ikona); });
+    stav.ucty.forEach(function (u) { u.ikona = ikonaNaKlic(u.ikona); });
     return stav;
   }
 
@@ -213,8 +236,10 @@
   function smazTransakci(id) {
     var i = indexPodleId(stav.transakce, id);
     if (i < 0) return false;
+    var mela = stav.transakce[i].fotka;
     stav.transakce.splice(i, 1);
     uloz();
+    if (mela) smazFotku(id);
     return true;
   }
 
@@ -230,12 +255,30 @@
 
   function kategorie(id) {
     return najdi(stav.kategorie, id) ||
-      { id: id, nazev: 'Bez kategorie', ikona: '❔', typ: 'vydaj', barva: 4 };
+      { id: id, nazev: 'Bez kategorie', ikona: 'jine', typ: 'vydaj', barva: 4 };
   }
 
   function ucet(id) {
     return najdi(stav.ucty, id) ||
-      { id: id, nazev: 'Neznámý účet', ikona: '❔', pocatek: 0, barva: 4 };
+      { id: id, nazev: 'Neznámý účet', ikona: 'jine', pocatek: 0, barva: 4 };
+  }
+
+  /**
+   * Rozpad transakce na dvojice kategorie + částka. Nákup rozepsaný na
+   * položky se počítá po položkách, aby se každá věc započetla tam,
+   * kam patří; ostatní záznamy vrátí jedinou dvojici.
+   */
+  function rozpad(t) {
+    if (t.polozky && t.polozky.length) {
+      return t.polozky.map(function (p) {
+        return { kat: p.kat || t.kat, castka: p.castka };
+      });
+    }
+    return [{ kat: t.kat, castka: t.castka }];
+  }
+
+  function soucetPolozek(polozky) {
+    return (polozky || []).reduce(function (a, p) { return a + (Number(p.castka) || 0); }, 0);
   }
 
   function kategorieTypu(typ) {
@@ -292,9 +335,11 @@
     for (var i = 0; i < seznam.length; i++) {
       var t = seznam[i];
       if (t.typ !== typ) continue;
-      if (!mapa[t.kat]) mapa[t.kat] = { kat: t.kat, castka: 0, pocet: 0 };
-      mapa[t.kat].castka += t.castka;
-      mapa[t.kat].pocet++;
+      rozpad(t).forEach(function (d) {
+        if (!mapa[d.kat]) mapa[d.kat] = { kat: d.kat, castka: 0, pocet: 0 };
+        mapa[d.kat].castka += d.castka;
+        mapa[d.kat].pocet++;
+      });
     }
     return Object.keys(mapa).map(function (k) {
       var z = mapa[k], k2 = kategorie(k);
@@ -323,7 +368,9 @@
     var utraceno = {};
     seznam.forEach(function (t) {
       if (t.typ !== 'vydaj') return;
-      utraceno[t.kat] = (utraceno[t.kat] || 0) + t.castka;
+      rozpad(t).forEach(function (d) {
+        utraceno[d.kat] = (utraceno[d.kat] || 0) + d.castka;
+      });
     });
     return Object.keys(stav.rozpocty)
       .filter(function (k) { return Number(stav.rozpocty[k]) > 0; })
@@ -388,8 +435,10 @@
       var odstup = (rok - r) * 12 + (mesic - m);
       if (odstup >= 1 && odstup <= 6) meliDataMesice[odstup] = true;
       if (t.typ !== 'vydaj' || d > doDne) continue;
-      if (odstup === 0) ted[t.kat] = (ted[t.kat] || 0) + t.castka;
-      else if (odstup >= 1 && odstup <= 6) drive[t.kat] = (drive[t.kat] || 0) + t.castka;
+      rozpad(t).forEach(function (kus) {
+        if (odstup === 0) ted[kus.kat] = (ted[kus.kat] || 0) + kus.castka;
+        else if (odstup >= 1 && odstup <= 6) drive[kus.kat] = (drive[kus.kat] || 0) + kus.castka;
+      });
     }
 
     var pocetMesicu = Object.keys(meliDataMesice).length;
@@ -456,6 +505,170 @@
     }).slice(0, kolik || 3);
   }
 
+  /* ---------- podklady pro grafy ---------- */
+
+  var DNY_KRATCE = ['po', 'út', 'st', 'čt', 'pá', 'so', 'ne'];
+
+  /** Výdaje po jednotlivých dnech měsíce. */
+  function dennitrata(rok, mesic) {
+    var poslDen = new Date(rok, mesic + 1, 0).getDate();
+    var pole = [];
+    for (var d = 1; d <= poslDen; d++) pole.push({ den: d, vydaje: 0, pocet: 0 });
+    vMesici(rok, mesic).forEach(function (t) {
+      if (t.typ !== 'vydaj') return;
+      var d = +t.datum.slice(8, 10);
+      if (pole[d - 1]) { pole[d - 1].vydaje += t.castka; pole[d - 1].pocet++; }
+    });
+    return pole;
+  }
+
+  /** Narůstající útrata dne po dni – tento měsíc proti předchozímu. */
+  function kumulativne(rok, mesic) {
+    function rada(r, m) {
+      var poslDen = new Date(r, m + 1, 0).getDate();
+      var denni = new Array(poslDen + 1).join('0').split('').map(Number);
+      vMesici(r, m).forEach(function (t) {
+        if (t.typ !== 'vydaj') return;
+        denni[+t.datum.slice(8, 10) - 1] += t.castka;
+      });
+      var soucet = 0;
+      return denni.map(function (v) { soucet += v; return soucet; });
+    }
+    var predchozi = new Date(rok, mesic - 1, 1);
+    return {
+      ted: rada(rok, mesic),
+      minule: rada(predchozi.getFullYear(), predchozi.getMonth()),
+      popisMinule: MESICE[predchozi.getMonth()]
+    };
+  }
+
+  /** Zůstatek ke konci každého z posledních n měsíců. */
+  function zustatkyMesicu(rok, mesic, n) {
+    var pocatek = stav.ucty.reduce(function (a, u) { return a + (Number(u.pocatek) || 0); }, 0);
+    var vysledek = [];
+    for (var i = n - 1; i >= 0; i--) {
+      var d = new Date(rok, mesic - i + 1, 0);       // poslední den měsíce
+      var hranice = naISO(d);
+      var zmena = 0;
+      stav.transakce.forEach(function (t) {
+        if (t.datum > hranice) return;
+        if (t.typ === 'prijem') zmena += t.castka;
+        else if (t.typ === 'vydaj') zmena -= t.castka;
+      });
+      vysledek.push({
+        rok: d.getFullYear(), mesic: d.getMonth(),
+        popis: MESICE_KRATCE[d.getMonth()],
+        zustatek: pocatek + zmena
+      });
+    }
+    return vysledek;
+  }
+
+  /** Výdaje podle dne v týdnu (pondělí první) za zadaný měsíc. */
+  function podleDneVTydnu(rok, mesic) {
+    var pole = DNY_KRATCE.map(function (p) { return { popis: p, vydaje: 0, pocet: 0 }; });
+    vMesici(rok, mesic).forEach(function (t) {
+      if (t.typ !== 'vydaj') return;
+      var i = (zISO(t.datum).getDay() + 6) % 7;
+      pole[i].vydaje += t.castka;
+      pole[i].pocet++;
+    });
+    return pole;
+  }
+
+  /** Výdaje podle účtu – odkud peníze odcházejí. */
+  function podleUctu(seznam) {
+    var mapa = {};
+    seznam.forEach(function (t) {
+      if (t.typ !== 'vydaj') return;
+      mapa[t.ucet] = (mapa[t.ucet] || 0) + t.castka;
+    });
+    return Object.keys(mapa).map(function (id) {
+      var u = ucet(id);
+      return { kat: id, nazev: u.nazev, ikona: u.ikona, barva: u.barva, castka: mapa[id], pocet: 0 };
+    }).sort(function (a, b) { return b.castka - a.castka; });
+  }
+
+  /* ---------- účtenky (fotky v IndexedDB) ---------- */
+
+  var DB_NAZEV = 'moje-finance-fotky';
+  var DB_SKLAD = 'fotky';
+  var dbSlib = null;
+
+  function db() {
+    if (dbSlib) return dbSlib;
+    dbSlib = new Promise(function (splnit, zamitnout) {
+      if (!global.indexedDB) { zamitnout(new Error('bez IndexedDB')); return; }
+      var zadost = global.indexedDB.open(DB_NAZEV, 1);
+      zadost.onupgradeneeded = function () {
+        var d = zadost.result;
+        if (!d.objectStoreNames.contains(DB_SKLAD)) d.createObjectStore(DB_SKLAD, { keyPath: 'id' });
+      };
+      zadost.onsuccess = function () { splnit(zadost.result); };
+      zadost.onerror = function () { zamitnout(zadost.error); };
+    });
+    return dbSlib;
+  }
+
+  function operace(rezim, prace) {
+    return db().then(function (d) {
+      return new Promise(function (splnit, zamitnout) {
+        var tr = d.transaction(DB_SKLAD, rezim);
+        var zadost = prace(tr.objectStore(DB_SKLAD));
+        zadost.onsuccess = function () { splnit(zadost.result); };
+        zadost.onerror = function () { zamitnout(zadost.error); };
+      });
+    });
+  }
+
+  /** Uloží fotku k transakci; se zapnutým zámkem zašifrovanou. */
+  function ulozFotku(id, bajty) {
+    var pripravit = sifra && sifra.zasifrujBin
+      ? sifra.zasifrujBin(bajty).then(function (s) { return { data: s, sifrovano: true }; })
+      : Promise.resolve({ data: bajty, sifrovano: false });
+    return pripravit.then(function (z) {
+      return operace('readwrite', function (sklad) {
+        return sklad.put({ id: id, data: z.data, sifrovano: z.sifrovano });
+      });
+    });
+  }
+
+  function nactiFotku(id) {
+    return operace('readonly', function (sklad) { return sklad.get(id); })
+      .then(function (z) {
+        if (!z) return null;
+        if (!z.sifrovano) return z.data;
+        if (!sifra || !sifra.desifrujBin) return null;
+        return sifra.desifrujBin(z.data);
+      });
+  }
+
+  function smazFotku(id) {
+    return operace('readwrite', function (sklad) { return sklad.delete(id); })
+      .catch(function () { /* fotka nebyla, nevadí */ });
+  }
+
+  function vsechnyFotky() {
+    return operace('readonly', function (sklad) { return sklad.getAll(); })
+      .then(function (zaznamy) {
+        return Promise.all((zaznamy || []).map(function (z) {
+          var data = (z.sifrovano && sifra && sifra.desifrujBin)
+            ? sifra.desifrujBin(z.data) : Promise.resolve(z.data);
+          return Promise.resolve(data).then(function (d) { return { id: z.id, data: d }; });
+        }));
+      })
+      .catch(function () { return []; });
+  }
+
+  /** Přepíše všechny fotky současnou šifrou (po zapnutí či vypnutí zámku). */
+  function prepisFotky(fotky) {
+    return fotky.reduce(function (retez, f) {
+      return retez.then(function () { return ulozFotku(f.id, f.data); });
+    }, Promise.resolve());
+  }
+
+  function maFotku(t) { return !!(t && t.fotka); }
+
   /* ---------- pravidelné platby ---------- */
 
   /** Doplní chybějící pravidelné platby za uplynulé měsíce. Vrátí počet přidaných. */
@@ -514,7 +727,8 @@
   }
 
   function doCsv() {
-    var radky = [['Datum', 'Typ', 'Kategorie', 'Ucet', 'Kam', 'Castka', 'Poznamka']];
+    var radky = [['Datum', 'Typ', 'Kategorie', 'Ucet', 'Kam', 'Castka', 'Poznamka',
+      'Polozky', 'Uctenka']];
     serazene().slice().reverse().forEach(function (t) {
       radky.push([
         t.datum,
@@ -523,13 +737,43 @@
         ucet(t.ucet).nazev,
         t.ucetDo ? ucet(t.ucetDo).nazev : '',
         String(t.castka).replace('.', ','),
-        t.pozn || ''
+        t.pozn || '',
+        (t.polozky || []).map(function (p) {
+          return (p.nazev || kategorie(p.kat).nazev) + ' ' + String(p.castka).replace('.', ',');
+        }).join(' + '),
+        t.fotka ? 'ano' : ''
       ]);
     });
     // BOM, aby Excel poznal diakritiku
     return '﻿' + radky.map(function (r) {
       return r.map(bunkaCsv).join(';');
     }).join('\r\n');
+  }
+
+  /* ---------- záloha včetně účtenek ---------- */
+
+  function bajtyNaB64(buf) {
+    var b = new Uint8Array(buf), s = '', krok = 8192;
+    for (var i = 0; i < b.length; i += krok) {
+      s += String.fromCharCode.apply(null, b.subarray(i, i + krok));
+    }
+    return global.btoa(s);
+  }
+
+  function b64NaBajty(text) {
+    var bin = global.atob(text), b = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    return b.buffer;
+  }
+
+  /** Kompletní záloha – i s fotkami účtenek, aby se nedaly ztratit. */
+  function doJsonSFotkami() {
+    return vsechnyFotky().then(function (fotky) {
+      var obal = JSON.parse(doJson());
+      obal.fotky = {};
+      fotky.forEach(function (f) { obal.fotky[f.id] = bajtyNaB64(f.data); });
+      return JSON.stringify(obal, null, 1);
+    });
   }
 
   function nactiZalohu(text) {
@@ -542,7 +786,14 @@
     stav.rozpocty = d.rozpocty && typeof d.rozpocty === 'object' ? d.rozpocty : {};
     stav.pravidelne = Array.isArray(d.pravidelne) ? d.pravidelne : [];
     stav.nastaveni = Object.assign({}, z.nastaveni, d.nastaveni || {});
+    stav.kategorie.forEach(function (k) { k.ikona = ikonaNaKlic(k.ikona); });
+    stav.ucty.forEach(function (u) { u.ikona = ikonaNaKlic(u.ikona); });
     ulozHned();
+    if (d.fotky) {
+      Object.keys(d.fotky).forEach(function (id) {
+        try { ulozFotku(id, b64NaBajty(d.fotky[id])); } catch (e) { /* poškozená fotka */ }
+      });
+    }
     return stav.transakce.length;
   }
 
@@ -598,6 +849,20 @@
     souhrnTydne: souhrnTydne,
     trendyKategorii: trendyKategorii,
     sablony: sablony,
+    rozpad: rozpad,
+    soucetPolozek: soucetPolozek,
+    dennitrata: dennitrata,
+    kumulativne: kumulativne,
+    zustatkyMesicu: zustatkyMesicu,
+    podleDneVTydnu: podleDneVTydnu,
+    podleUctu: podleUctu,
+    ulozFotku: ulozFotku,
+    nactiFotku: nactiFotku,
+    smazFotku: smazFotku,
+    vsechnyFotky: vsechnyFotky,
+    prepisFotky: prepisFotky,
+    maFotku: maFotku,
+    doJsonSFotkami: doJsonSFotkami,
     dopisPravidelne: dopisPravidelne,
     doJson: doJson,
     doCsv: doCsv,

@@ -28,6 +28,9 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 
 **Zápis**
 - výdaj, příjem a **převod mezi účty** (převod nemění celkový majetek, jen ho přesouvá)
+- **nákup rozepsaný na položky** – jeden nákup, víc věcí, každá do své kategorie; částka se
+  sečte sama a v přehledech se každá položka započítá tam, kam patří
+- **fotka účtenky** u záznamu; se zapnutým zámkem je zašifrovaná stejně jako ostatní data
 - **dlouhý stisk na `+`** nabídne tři nejčastější kombinace – jedno klepnutí zapíše, hláška nabídne vrácení
 - rychlá tlačítka +50 / +100 / +200 / +500 / +1 000, která se sčítají
 - do částky lze napsat i počet: `120+35` uloží 155
@@ -38,12 +41,19 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 - filtry: typ, období (měsíc / rok / vše), fulltext v poznámkách, kategoriích a účtech
 - klepnutím na záznam se otevře úprava i mazání
 
-**Účty** – libovolný počet, počáteční stav, vlastní ikona.
+**Grafy** (z Přehledu tlačítkem *Víc grafů*, nebo z *Víc*)
+- útrata den po dni s vyznačeným dneškem a průměrem
+- narůstající útrata proti stejné části minulého měsíce
+- ve který den v týdnu utrácíte nejvíc
+- vývoj zůstatku za 12 měsíců
+- odkud peníze odcházejí (po účtech) a odkud přicházejí (po kategoriích)
+
+**Účty** – libovolný počet, počáteční stav, vlastní ikona a barva.
 
 **Víc**
 - zabezpečení: změna PINu, odemykání otiskem, za jak dlouho zamknout, vypnutí zámku
 - měsíční rozpočty u kategorií
-- vlastní kategorie (název + emoji ikona)
+- vlastní kategorie (název, ikona z mřížky a barva)
 - **pravidelné platby** – nájem, telefon, předplatné; zapíšou se samy, jakmile nastane den v měsíci
 - světlý / tmavý vzhled, jiná měna
 - **záloha do JSON**, načtení zálohy zpět, **export do CSV pro Excel**
@@ -89,11 +99,22 @@ Data jsou v tomhle případě navázaná na cestu k souboru – jako trvalé ře
 
 Data leží v `localStorage` prohlížeče, se zapnutým zámkem zašifrovaná. To je spolehlivé, ale ne
 nesmrtelné – vymazání dat prohlížeče, odinstalace **nebo zapomenutý PIN** je smaže.
-**Jednou za čas si ve *Víc → Data* stáhněte zálohu (JSON).** Zpátky se načte tamtéž.
+**Jednou za čas si ve *Víc → Data* stáhněte zálohu (JSON).** Zpátky se načte tamtéž;
+záloha nese i fotky účtenek, takže bývá o dost větší.
 CSV je pro Excel, zpátky ho aplikace nenačítá.
 
 Záloha je záměrně **nešifrovaná** – kdyby byla zamčená stejným PINem, přestala by být pojistkou
 proti jeho zapomenutí. Chovejte se k ní jako k citlivému souboru.
+
+## Ikony
+
+Ikony jsou vektorové (SVG), ne emoji. Emoji vypadají na každém telefonu jinak, nesou si vlastní
+účaří – proto se nedaly spolehlivě vycentrovat – a nejdou obarvit. Sada pochází z projektu
+**Lucide** (licence ISC, plné znění v `LICENCE-IKONY.txt`), kresby jsou přibalené natvrdo
+v `js/ikony.js`, takže aplikace nic nestahuje a funguje bez signálu. Ikona bere barvu své
+kategorie a v mřížce se centruje sama.
+
+Kategorii i účtu se ikona a barva vybírá z mřížky ve *Víc → Kategorie* a v *Účty*.
 
 ## Jak je to se zámkem udělané
 
@@ -117,7 +138,8 @@ Soubory:
 | `index.html` | kostra obrazovek |
 | `css/styl.css` | vzhled, barvy (světlé i tmavé téma) |
 | `js/data.js` | uložení dat a všechny výpočty (zůstatky, souhrny, rozpočty, export) |
-| `js/grafy.js` | grafy z HTML prvků, bez knihovny |
+| `js/grafy.js` | grafy z HTML a SVG prvků, bez knihovny |
+| `js/ikony.js` | vektorové ikony (sada Lucide, licence ISC – viz `LICENCE-IKONY.txt`) |
 | `js/zamek.js` | PIN, biometrika, šifrování a obrazovka zámku |
 | `js/app.js` | obrazovky, formuláře, obsluha klepnutí |
 | `sw.js` | offline vrstva |
@@ -135,7 +157,11 @@ kontrola, že v trezoru opravdu není čitelný text; dále zápis výdaje, př�
 tlačítka, počet v částce, filtry a hledání, proklik z grafu i z „dnes", prstenec, barevné ikony,
 trend kategorie, šablony přes dlouhý stisk včetně vrácení zpět, rozpočty, nová kategorie i účet,
 přepnutí tématu, výběr měsíce, export JSON/CSV a přežití restartu.
-**53 kontrol, bez chyby v konzoli.**
+K tomu vektorové ikony (včetně změření, že sedí ve středu svého pole), všech šest grafů,
+nákup rozepsaný na dvě položky s různými kategoriemi a fotka účtenky – ta se ukládá,
+je v úložišti zašifrovaná (v datech není holý JPEG) a po znovuotevření se načte zpátky.
+
+**81 kontrol, bez chyby v konzoli.**
 
 Po vlastních úpravách si totéž pustíte znovu:
 
