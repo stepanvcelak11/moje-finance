@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Moje finance</title>
+<meta name="description" content="Přehled o penězích – výdaje, příjmy, účty a rozpočty. Vše zůstává v telefonu.">
+<meta name="theme-color" content="#111110">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ikony/ikona-192.png">
+<link rel="apple-touch-icon" href="ikony/ikona-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Finance">
+<link rel="stylesheet" href="css/styl.css">
+</head>
+<body>
+
+<header class="hlavicka" id="hlavicka">
+  <div class="hlavicka-radek">
+    <button class="mesic-sip" id="mesic-zpet" aria-label="Předchozí měsíc">‹</button>
+    <button class="mesic-nazev" id="mesic-nazev" aria-label="Vybrat měsíc">Srpen 2026</button>
+    <button class="mesic-sip" id="mesic-vpred" aria-label="Následující měsíc">›</button>
+  </div>
+</header>
+
+<main id="obsah">
+
+  <!-- ============ PŘEHLED ============ -->
+  <section class="pohled" id="pohled-prehled">
+
+    <div class="karta hero">
+      <div class="hero-popis">Zůstatek celkem</div>
+      <div class="hero-cislo" id="hero-zustatek">0 Kč</div>
+      <div class="hero-radek" id="hero-uctu"></div>
+    </div>
+
+    <div class="dvojice">
+      <div class="karta dlazdice">
+        <div class="dlazdice-hlava"><span class="tecka tecka-prijem"></span>Příjmy</div>
+        <div class="dlazdice-cislo prijem" id="souhrn-prijmy">0 Kč</div>
+        <div class="dlazdice-pod" id="souhrn-prijmy-pocet">&nbsp;</div>
+      </div>
+      <div class="karta dlazdice">
+        <div class="dlazdice-hlava"><span class="tecka tecka-vydaj"></span>Výdaje</div>
+        <div class="dlazdice-cislo vydaj" id="souhrn-vydaje">0 Kč</div>
+        <div class="dlazdice-pod" id="souhrn-vydaje-pocet">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava">
+        <h2>Zůstalo za měsíc</h2>
+      </div>
+      <div class="rozdil-cislo" id="souhrn-rozdil">0 Kč</div>
+      <div class="rozdil-pruh"><div class="rozdil-vypln" id="rozdil-vypln"></div></div>
+      <div class="rozdil-pod" id="souhrn-rozdil-pod">Zatím žádné záznamy v tomto měsíci.</div>
+    </div>
+
+    <div class="karta" id="karta-kategorie">
+      <div class="karta-hlava">
+        <h2>Kam šly peníze</h2>
+        <span class="karta-doplnek" id="kategorie-celkem"></span>
+      </div>
+      <div id="graf-podil"></div>
+      <div id="graf-kategorie" class="kat-seznam"></div>
+      <p class="prazdno" id="kategorie-prazdno" hidden>V tomto měsíci zatím nemáte žádný výdaj.</p>
+    </div>
+
+    <div class="karta" id="karta-rozpocty" hidden>
+      <div class="karta-hlava">
+        <h2>Rozpočty</h2>
+        <button class="odkaz" data-jdi="nastaveni">Upravit</button>
+      </div>
+      <div id="seznam-rozpoctu"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava">
+        <h2>Posledních 6 měsíců</h2>
+      </div>
+      <div id="graf-mesice"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava">
+        <h2>Poslední pohyby</h2>
+        <button class="odkaz" data-jdi="historie">Vše</button>
+      </div>
+      <div id="posledni-pohyby"></div>
+    </div>
+
+  </section>
+
+  <!-- ============ HISTORIE ============ -->
+  <section class="pohled" id="pohled-historie" hidden>
+    <div class="filtr-pas">
+      <input type="search" id="hledani" class="hledani" placeholder="Hledat v poznámkách a kategoriích" autocomplete="off">
+      <div class="chipy" id="chipy-typ">
+        <button class="chip chip-akt" data-typ="vse">Vše</button>
+        <button class="chip" data-typ="vydaj">Výdaje</button>
+        <button class="chip" data-typ="prijem">Příjmy</button>
+        <button class="chip" data-typ="prevod">Převody</button>
+      </div>
+      <div class="chipy" id="chipy-rozsah">
+        <button class="chip chip-akt" data-rozsah="mesic">Tento měsíc</button>
+        <button class="chip" data-rozsah="rok">Rok</button>
+        <button class="chip" data-rozsah="vse">Vše</button>
+      </div>
+      <div class="filtr-aktivni" id="filtr-aktivni" hidden></div>
+    </div>
+    <div class="karta souhrn-filtru" id="souhrn-filtru"></div>
+    <div id="seznam-transakci"></div>
+    <p class="prazdno" id="historie-prazdno" hidden>Nic k zobrazení. Zkuste jiný filtr nebo přidejte první záznam tlačítkem <b>+</b>.</p>
+  </section>
+
+  <!-- ============ ÚČTY ============ -->
+  <section class="pohled" id="pohled-ucty" hidden>
+    <div class="karta hero hero-maly">
+      <div class="hero-popis">Zůstatek celkem</div>
+      <div class="hero-cislo" id="ucty-celkem">0 Kč</div>
+    </div>
+    <div id="seznam-uctu"></div>
+    <div class="tlacitka-radek">
+      <button class="tl tl-hlavni" id="tl-novy-ucet">+ Nový účet</button>
+      <button class="tl" id="tl-prevod">↔ Převod mezi účty</button>
+    </div>
+    <p class="napoveda">Zůstatek účtu = počáteční stav + příjmy − výdaje − odchozí převody + příchozí převody.</p>
+  </section>
+
+  <!-- ============ VÍC ============ -->
+  <section class="pohled" id="pohled-nastaveni" hidden>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Rozpočty na měsíc</h2></div>
+      <p class="napoveda napoveda-nahore">Nastavte měsíční strop u kategorií, které chcete hlídat. Prázdné pole = nehlídá se.</p>
+      <div id="editor-rozpoctu"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava">
+        <h2>Kategorie</h2>
+        <button class="odkaz" id="tl-nova-kategorie">+ Přidat</button>
+      </div>
+      <div class="chipy chipy-podskupina" id="chipy-kat-typ">
+        <button class="chip chip-akt" data-kattyp="vydaj">Výdaje</button>
+        <button class="chip" data-kattyp="prijem">Příjmy</button>
+      </div>
+      <div id="editor-kategorii"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava">
+        <h2>Pravidelné platby</h2>
+        <button class="odkaz" id="tl-nova-pravidelna">+ Přidat</button>
+      </div>
+      <p class="napoveda napoveda-nahore">Nájem, telefon, pojistka… Aplikace je zapíše sama, jakmile nastane den v měsíci.</p>
+      <div id="seznam-pravidelnych"></div>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Vzhled</h2></div>
+      <div class="chipy" id="chipy-tema">
+        <button class="chip" data-tema="auto">Podle systému</button>
+        <button class="chip" data-tema="light">Světlý</button>
+        <button class="chip" data-tema="dark">Tmavý</button>
+      </div>
+      <label class="radek-pole">
+        <span>Měna</span>
+        <input type="text" id="pole-mena" maxlength="4" class="pole pole-uzke">
+      </label>
+    </div>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Data</h2></div>
+      <p class="napoveda napoveda-nahore">Všechno je uložené jen ve vašem telefonu. Zálohu si čas od času stáhněte.</p>
+      <div class="tlacitka-radek">
+        <button class="tl tl-hlavni" id="tl-zaloha">⇩ Stáhnout zálohu (JSON)</button>
+        <button class="tl" id="tl-obnova">⇧ Načíst zálohu</button>
+        <button class="tl" id="tl-csv">⇩ Export do CSV (Excel)</button>
+        <button class="tl tl-nebezpeci" id="tl-vymaz">Smazat všechna data</button>
+      </div>
+      <input type="file" id="pole-soubor" accept="application/json,.json" hidden>
+      <div class="statistika" id="statistika"></div>
+    </div>
+
+    <p class="patka">Moje finance · verze <span id="verze">1.0</span><br>Data neopouštějí telefon. Žádné účty, žádné servery.</p>
+  </section>
+
+</main>
+
+<nav class="spodni" id="spodni">
+  <button class="nav-tl nav-akt" data-jdi="prehled"><span class="nav-ikona">◎</span><span>Přehled</span></button>
+  <button class="nav-tl" data-jdi="historie"><span class="nav-ikona">≡</span><span>Historie</span></button>
+  <button class="nav-plus" id="tl-pridat" aria-label="Přidat záznam">+</button>
+  <button class="nav-tl" data-jdi="ucty"><span class="nav-ikona">▤</span><span>Účty</span></button>
+  <button class="nav-tl" data-jdi="nastaveni"><span class="nav-ikona">⚙</span><span>Víc</span></button>
+</nav>
+
+<!-- ============ FORMULÁŘ ZÁZNAMU ============ -->
+<div class="prekryv" id="prekryv-zaznam" hidden>
+  <div class="list" role="dialog" aria-modal="true" aria-label="Záznam">
+    <div class="list-hlava">
+      <button class="list-zavrit" id="zaznam-zrusit">Zrušit</button>
+      <strong id="zaznam-titulek">Nový záznam</strong>
+      <button class="list-ulozit" id="zaznam-ulozit">Uložit</button>
+    </div>
+    <div class="list-telo">
+      <div class="prepinac" id="prepinac-typ">
+        <button data-typ="vydaj" class="prep-akt">Výdaj</button>
+        <button data-typ="prijem">Příjem</button>
+        <button data-typ="prevod">Převod</button>
+      </div>
+
+      <div class="castka-blok">
+        <input type="text" inputmode="decimal" id="pole-castka" class="castka-pole" placeholder="0" autocomplete="off">
+        <span class="castka-mena" id="castka-mena">Kč</span>
+      </div>
+      <div class="rychle-castky" id="rychle-castky"></div>
+
+      <div class="skupina" id="skupina-kategorie">
+        <div class="skupina-nadpis">Kategorie</div>
+        <div class="kat-mrizka" id="vyber-kategorie"></div>
+      </div>
+
+      <div class="skupina">
+        <div class="skupina-nadpis" id="popis-ucet">Účet</div>
+        <div class="chipy chipy-obal" id="vyber-uctu"></div>
+      </div>
+
+      <div class="skupina" id="skupina-ucet-do" hidden>
+        <div class="skupina-nadpis">Kam</div>
+        <div class="chipy chipy-obal" id="vyber-uctu-do"></div>
+      </div>
+
+      <label class="radek-pole">
+        <span>Datum</span>
+        <input type="date" id="pole-datum" class="pole">
+      </label>
+
+      <label class="radek-pole radek-pole-sloupec">
+        <span>Poznámka</span>
+        <input type="text" id="pole-pozn" class="pole" placeholder="např. nákup Lidl, benzín, oběd" autocomplete="off">
+      </label>
+
+      <button class="tl tl-nebezpeci tl-siroke" id="zaznam-smazat" hidden>Smazat záznam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MALÝ DIALOG ============ -->
+<div class="prekryv" id="prekryv-dialog" hidden>
+  <div class="dialog" role="dialog" aria-modal="true">
+    <h3 id="dialog-titulek"></h3>
+    <div id="dialog-telo"></div>
+    <div class="dialog-tl">
+      <button class="tl" id="dialog-ne">Zrušit</button>
+      <button class="tl tl-hlavni" id="dialog-ano">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="hlaska" id="hlaska" hidden></div>
+
+<script src="js/data.js"></script>
+<script src="js/grafy.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
