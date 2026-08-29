@@ -61,12 +61,27 @@
 
   var casovacHlasky = null;
 
-  function hlaska(text) {
+  /** Hláška dole; s `akce` = {popis, fn} přibude tlačítko (třeba „Zpět“). */
+  function hlaska(text, akce) {
     var el = $('hlaska');
-    el.textContent = text;
+    el.textContent = '';
+    var t = document.createElement('span');
+    t.textContent = text;
+    el.appendChild(t);
+    if (akce) {
+      var b = document.createElement('button');
+      b.className = 'hlaska-zpet';
+      b.textContent = akce.popis;
+      b.addEventListener('click', function () {
+        el.hidden = true;
+        if (casovacHlasky) clearTimeout(casovacHlasky);
+        akce.fn();
+      });
+      el.appendChild(b);
+    }
     el.hidden = false;
     if (casovacHlasky) clearTimeout(casovacHlasky);
-    casovacHlasky = setTimeout(function () { el.hidden = true; }, 2200);
+    casovacHlasky = setTimeout(function () { el.hidden = true; }, akce ? 6000 : 2200);
   }
 
   var dialogPotvrd = null;
@@ -156,17 +171,33 @@
     $('souhrn-prijmy-pocet').textContent = souhrn.pocetP ? souhrn.pocetP + '× za měsíc' : 'zatím nic';
     $('souhrn-vydaje-pocet').textContent = souhrn.pocetV ? souhrn.pocetV + '× za měsíc' : 'zatím nic';
 
-    // rozdíl
+    // dnes a tento týden
+    var dnesS = D.souhrnDnes(), tydenS = D.souhrnTydne();
+    $('hero-dnes').lastElementChild.textContent = kc(dnesS.vydaje);
+    $('hero-tyden').lastElementChild.textContent = kc(tydenS.vydaje);
+
+    // rozdíl s prstencem
     $('souhrn-rozdil').textContent = kcZnak(souhrn.rozdil);
     $('souhrn-rozdil').className = 'rozdil-cislo ' + (souhrn.rozdil < 0 ? 'vydaj' : (souhrn.rozdil > 0 ? 'prijem' : ''));
-    var podilUtraty = souhrn.prijmy > 0 ? Math.min(100, souhrn.vydaje / souhrn.prijmy * 100) : (souhrn.vydaje > 0 ? 100 : 0);
-    $('rozdil-vypln').style.width = podilUtraty.toFixed(1) + '%';
-    $('rozdil-vypln').style.background = souhrn.rozdil < 0 ? 'var(--vydaj)' : 'var(--prijem)';
+
+    var podilUtraty = souhrn.prijmy > 0 ? souhrn.vydaje / souhrn.prijmy : (souhrn.vydaje > 0 ? 1 : 0);
+    var procenta = Math.round(podilUtraty * 100);
+    var barvaPrstence, stred, podStredem;
+    if (!souhrn.prijmy && !souhrn.vydaje) {
+      barvaPrstence = 'var(--ink-3)'; stred = '—'; podStredem = 'zatím nic';
+    } else if (!souhrn.prijmy) {
+      barvaPrstence = 'var(--vydaj)'; stred = '—'; podStredem = 'bez příjmu';
+    } else {
+      barvaPrstence = podilUtraty >= 1 ? 'var(--vydaj)'
+        : (podilUtraty >= 0.8 ? 'var(--varovani)' : 'var(--prijem)');
+      stred = procenta + ' %'; podStredem = 'utraceno';
+    }
+    $('prstenec').innerHTML = G.prstenec(podilUtraty, barvaPrstence, stred, podStredem);
 
     var pod;
     if (!souhrn.pocetP && !souhrn.pocetV) pod = 'Zatím žádné záznamy v tomto měsíci.';
     else if (souhrn.prijmy === 0) pod = 'Bez zapsaného příjmu – utraceno ' + kc(souhrn.vydaje) + '.';
-    else if (souhrn.rozdil >= 0) pod = 'Z příjmů jste utratili ' + Math.round(podilUtraty) + ' %. Zbývá ' + kc(souhrn.rozdil) + '.';
+    else if (souhrn.rozdil >= 0) pod = 'Z příjmů jste utratili ' + procenta + ' %. Zbývá ' + kc(souhrn.rozdil) + '.';
     else pod = 'Výdaje převyšují příjmy o ' + kc(-souhrn.rozdil) + '. Rozdíl jde z úspor.';
     var denVMesici = pocetDniZbyva();
     if (denVMesici > 0 && souhrn.rozdil > 0) {
@@ -177,9 +208,10 @@
     // kategorie
     var kategorie = D.podleKategorii(vMesici, 'vydaj');
     var jsou = kategorie.length > 0;
+    var trendy = jsou ? D.trendyKategorii(rok, mesic) : {};
     $('kategorie-prazdno').hidden = jsou;
     $('graf-podil').innerHTML = jsou ? G.pruhPodilu(kategorie, kc) : '';
-    $('graf-kategorie').innerHTML = jsou ? G.seznamKategorii(kategorie, kc) : '';
+    $('graf-kategorie').innerHTML = jsou ? G.seznamKategorii(kategorie, kc, trendy) : '';
     $('kategorie-celkem').textContent = jsou ? kategorie.length + ' kategorií · ' + kc(souhrn.vydaje) : '';
 
     // rozpočty
@@ -198,6 +230,14 @@
     $('posledni-pohyby').innerHTML = posledni.length
       ? '<div class="skupina-karta">' + posledni.map(polozkaHtml).join('') + '</div>'
       : '<p class="prazdno">Zatím nic. Přidejte první záznam tlačítkem +.</p>';
+  }
+
+  /** Pondělí tohoto týdne (týden u nás začíná pondělkem). */
+  function pondeliTydne() {
+    var d = new Date();
+    var k = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    k.setDate(k.getDate() - ((k.getDay() + 6) % 7));
+    return k;
   }
 
   function pocetDniZbyva() {
@@ -235,21 +275,24 @@
   /* ---------- řádek transakce ---------- */
 
   function polozkaHtml(t) {
-    var zn, castka, ikona, nazev, pod;
+    var zn, castka, ikona, nazev, pod, barvaIkony;
     if (t.typ === 'prevod') {
       zn = ''; castka = kc(t.castka); ikona = '↔️';
       nazev = 'Převod';
       pod = D.ucet(t.ucet).nazev + ' → ' + D.ucet(t.ucetDo).nazev;
+      barvaIkony = 'var(--ink-3)';
     } else {
       var k = D.kategorie(t.kat);
       ikona = k.ikona; nazev = k.nazev;
       zn = t.typ === 'prijem' ? 'prijem' : 'vydaj';
       castka = (t.typ === 'prijem' ? '+' : '−') + cislo(t.castka) + ' ' + mena();
       pod = D.ucet(t.ucet).nazev;
+      barvaIkony = G.barva(k.barva);
     }
     if (t.pozn) pod = t.pozn + ' · ' + pod;
     return '<button class="polozka" data-transakce="' + esc(t.id) + '">' +
-      '<span class="polozka-ikona">' + esc(ikona) + '</span>' +
+      '<span class="polozka-ikona" style="background:color-mix(in srgb,' + barvaIkony +
+        ' 18%, var(--surface-2))">' + esc(ikona) + '</span>' +
       '<span><span class="polozka-nazev">' + esc(nazev) + '</span>' +
       '<span class="polozka-pod">' + esc(pod) + '</span></span>' +
       '<span class="polozka-castka ' + zn + '">' + esc(castka) + '</span>' +
@@ -264,9 +307,13 @@
     var vsechny = D.serazene();
     var hledane = filtr.text.trim().toLowerCase();
     var klic = D.klicMesice(rok, mesic);
+    var dnes = D.dnesISO();
+    var odTydne = filtr.rozsah === 'tyden' ? D.naISO(pondeliTydne()) : null;
     return vsechny.filter(function (t) {
       if (filtr.rozsah === 'mesic' && t.datum.slice(0, 7) !== klic) return false;
       if (filtr.rozsah === 'rok' && t.datum.slice(0, 4) !== String(rok)) return false;
+      if (filtr.rozsah === 'dnes' && t.datum !== dnes) return false;
+      if (filtr.rozsah === 'tyden' && (t.datum < odTydne || t.datum > dnes)) return false;
       if (filtr.typ !== 'vse' && t.typ !== filtr.typ) return false;
       if (filtr.kat && t.kat !== filtr.kat) return false;
       if (filtr.ucet && t.ucet !== filtr.ucet && t.ucetDo !== filtr.ucet) return false;
@@ -284,6 +331,10 @@
 
     // aktivní upřesnění
     var znacky = [];
+    if (filtr.rozsah === 'dnes' || filtr.rozsah === 'tyden') {
+      znacky.push('<button class="znacka-filtru" data-zrus="rozsah">' +
+        (filtr.rozsah === 'dnes' ? 'Jen dnešek' : 'Tento týden') + ' ✕</button>');
+    }
     if (filtr.kat) znacky.push('<button class="znacka-filtru" data-zrus="kat">' +
       esc(D.kategorie(filtr.kat).ikona + ' ' + D.kategorie(filtr.kat).nazev) + ' ✕</button>');
     if (filtr.ucet) znacky.push('<button class="znacka-filtru" data-zrus="ucet">' +
@@ -447,6 +498,9 @@
           '</div>';
         }).join('')
       : '<p class="napoveda" style="padding:6px 0 0">Zatím nic. Nájem nebo předplatné se pak zapíše samo.</p>';
+
+    // zabezpečení
+    vykresliZabezpeceni();
 
     // vzhled
     vse('#chipy-tema .chip').forEach(function (b) {
@@ -742,6 +796,201 @@
   }
 
   /* =================================================================
+     ŠABLONY – dlouhý stisk na +
+     ================================================================= */
+
+  var casovacStisku = null;
+  var bylDlouhy = false;
+
+  function hlidejDlouhyStisk(el, akce) {
+    function zacatek() {
+      bylDlouhy = false;
+      if (casovacStisku) clearTimeout(casovacStisku);
+      casovacStisku = setTimeout(function () {
+        bylDlouhy = true;
+        if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) { /* nevadí */ } }
+        akce();
+      }, 450);
+    }
+    function konec() { if (casovacStisku) { clearTimeout(casovacStisku); casovacStisku = null; } }
+    el.addEventListener('touchstart', zacatek, { passive: true });
+    el.addEventListener('touchend', konec);
+    el.addEventListener('touchcancel', konec);
+    el.addEventListener('touchmove', konec, { passive: true });
+    el.addEventListener('mousedown', zacatek);
+    el.addEventListener('mouseup', konec);
+    el.addEventListener('mouseleave', konec);
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+
+  function otevriSablony() {
+    var seznam = D.sablony(4);
+    if (!seznam.length) {
+      hlaska('Šablony se objeví, až budete mít víc podobných záznamů.');
+      return;
+    }
+    $('seznam-sablon').innerHTML = seznam.map(function (s, i) {
+      return '<button class="sablona" data-sablona="' + i + '">' +
+        '<span class="sablona-ikona" style="background:color-mix(in srgb,' + G.barva(s.barva) +
+          ' 18%, var(--surface-2))">' + esc(s.ikona) + '</span>' +
+        '<span><span class="sablona-nazev">' + esc(s.nazev) + '</span>' +
+        '<span class="sablona-pod">' + esc(D.ucet(s.ucet).nazev) + ' · zapsáno ' + s.pocet + '×</span></span>' +
+        '<span class="sablona-castka ' + (s.typ === 'prijem' ? 'prijem' : 'vydaj') + '">' +
+          (s.typ === 'prijem' ? '+' : '−') + esc(cislo(s.castka) + ' ' + mena()) + '</span>' +
+      '</button>';
+    }).join('');
+    ulozeneSablony = seznam;
+    $('prekryv-sablony').hidden = false;
+  }
+
+  var ulozeneSablony = [];
+
+  function zapisZeSablony(i) {
+    var s = ulozeneSablony[i];
+    if (!s) return;
+    $('prekryv-sablony').hidden = true;
+    var datum = D.dnesISO();
+    var t = D.pridejTransakci({
+      datum: datum, castka: s.castka, typ: s.typ, kat: s.kat,
+      ucet: s.ucet, ucetDo: null, pozn: ''
+    });
+    var dnes = new Date();
+    rok = dnes.getFullYear(); mesic = dnes.getMonth();
+    vykresli();
+    hlaska(s.nazev + ' ' + cislo(s.castka) + ' ' + mena() + ' zapsáno', {
+      popis: 'Zpět',
+      fn: function () {
+        D.smazTransakci(t.id);
+        vykresli();
+        hlaska('Vráceno.');
+      }
+    });
+  }
+
+  /* =================================================================
+     ZABEZPEČENÍ
+     ================================================================= */
+
+  function vykresliZabezpeceni() {
+    var Z = global.FZamek;
+    var html = '';
+
+    if (!Z.podporovano()) {
+      html = '<p class="napoveda napoveda-nahore">Zámek potřebuje zabezpečené připojení (https) ' +
+        'nebo localhost. Tady teď běží aplikace bez něj, takže se šifrovat nedá. ' +
+        'Přes adresu na GitHub Pages zámek funguje.</p>';
+      $('stav-zamku').innerHTML = html;
+      return;
+    }
+
+    if (!Z.jeZapnut()) {
+      html = '<p class="napoveda napoveda-nahore">Zámek je vypnutý – data leží v telefonu ' +
+        'nezašifrovaná. Po zapnutí se zamknou PINem.</p>' +
+        '<button class="tl tl-hlavni tl-siroke" style="margin-top:0" id="tl-zapni-zamek">Zapnout zámek</button>';
+      $('stav-zamku').innerHTML = html;
+      return;
+    }
+
+    var maBio = Z.maBiometriku();
+    var prodleva = D.stav().nastaveni.zamekPo;
+    if (typeof prodleva !== 'number') prodleva = 60000;
+
+    html =
+      '<div class="zamek-radek"><span><b>PIN</b><i>Zamyká a šifruje data v telefonu.</i></span>' +
+        '<button class="tl" data-zamek="pin">Změnit</button></div>';
+
+    if (Z.biometrikaMozna()) {
+      html += '<div class="zamek-radek"><span><b>Otisk nebo obličej</b><i>' +
+        (maBio ? 'Zapnuto – PIN zůstává jako záloha.' : 'Rychlejší odemykání, PIN zůstává.') +
+        '</i></span><button class="tl" data-zamek="' + (maBio ? 'bio-pryc' : 'bio') + '">' +
+        (maBio ? 'Vypnout' : 'Zapnout') + '</button></div>';
+    }
+
+    html += '<div class="zamek-radek"><span><b>Zamknout po</b><i>Když je aplikace na pozadí.</i></span>' +
+      '<select class="pole" id="pole-zamekpo">' +
+        [[0, 'hned'], [30000, '30 s'], [60000, '1 min'], [300000, '5 min'], [1800000, '30 min']]
+          .map(function (v) {
+            return '<option value="' + v[0] + '"' + (prodleva === v[0] ? ' selected' : '') +
+              '>' + v[1] + '</option>';
+          }).join('') +
+      '</select></div>';
+
+    html += '<div class="tlacitka-radek" style="margin-top:12px">' +
+      '<button class="tl" data-zamek="ted">Zamknout teď</button>' +
+      '<button class="tl tl-nebezpeci" data-zamek="vypnout">Vypnout zámek</button></div>' +
+      '<p class="napoveda">⚠ Zapomenutý PIN nejde obnovit – data by byla nenávratně pryč. ' +
+      'Držte si zálohu.</p>';
+
+    $('stav-zamku').innerHTML = html;
+  }
+
+  function dialogZmenyPinu() {
+    var Z = global.FZamek;
+    dialog({
+      titulek: 'Změnit PIN',
+      telo:
+        '<label>Současný PIN</label><input class="pole" id="d-stary" type="password" inputmode="numeric" maxlength="' + Z.DELKA_MAX + '">' +
+        '<label>Nový PIN (' + Z.DELKA_MIN + ' až ' + Z.DELKA_MAX + ' číslic)</label><input class="pole" id="d-novy" type="password" inputmode="numeric" maxlength="' + Z.DELKA_MAX + '">' +
+        '<label>Nový PIN znovu</label><input class="pole" id="d-novy2" type="password" inputmode="numeric" maxlength="' + Z.DELKA_MAX + '">',
+      ano: 'Změnit',
+      zamer: true,
+      potvrd: function () {
+        var stary = $('d-stary').value, novy = $('d-novy').value, novy2 = $('d-novy2').value;
+        if (novy.length < Z.DELKA_MIN || !/^[0-9]+$/.test(novy)) {
+          hlaska('Nový PIN musí mít aspoň ' + Z.DELKA_MIN + ' číslice.'); return false;
+        }
+        if (novy !== novy2) { hlaska('Nové PINy se neshodují.'); return false; }
+        Z.zmenPin(stary, novy).then(function () {
+          hlaska('PIN změněn.');
+        }).catch(function () {
+          hlaska('Současný PIN nesedí.');
+        });
+        return true;
+      }
+    });
+  }
+
+  function obsluhaZabezpeceni(co) {
+    var Z = global.FZamek;
+    if (co === 'pin') { dialogZmenyPinu(); return; }
+    if (co === 'ted') { Z.zamkni(); return; }
+    if (co === 'bio') {
+      hlaska('Potvrďte otiskem nebo obličejem…');
+      Z.zapniBiometriku().then(function () {
+        vykresliZabezpeceni();
+        hlaska('Hotovo, teď půjde odemknout otiskem.');
+      }).catch(function (e) {
+        hlaska(String(e && e.message) === 'NEPODPORUJE'
+          ? 'Tenhle telefon odemykání otiskem pro aplikaci v prohlížeči nepodporuje.'
+          : 'Nepovedlo se, zůstává PIN.');
+      });
+      return;
+    }
+    if (co === 'bio-pryc') {
+      Z.vypniBiometriku().then(function () {
+        vykresliZabezpeceni();
+        hlaska('Odemykání otiskem vypnuto.');
+      });
+      return;
+    }
+    if (co === 'vypnout') {
+      dialog({
+        titulek: 'Vypnout zámek?',
+        telo: '<p>Data se uloží <b>nezašifrovaná</b> a aplikace se přestane ptát na PIN. ' +
+          'Kdokoli, kdo se dostane k telefonu, uvidí vaše finance.</p>',
+        ano: 'Vypnout', nebezpeci: true,
+        potvrd: function () {
+          Z.vypniZamek().then(function () {
+            vykresliNastaveni();
+            hlaska('Zámek vypnutý.');
+          });
+          return true;
+        }
+      });
+    }
+  }
+
+  /* =================================================================
      TÉMA
      ================================================================= */
 
@@ -771,8 +1020,29 @@
     naSlys($('mesic-vpred'), 'click', function () { posunMesic(1); });
     naSlys($('mesic-nazev'), 'click', otevriVyberMesice);
 
-    // přidat
-    naSlys($('tl-pridat'), 'click', function () { zaloz('vydaj'); otevriZaznam(); });
+    // přidat – klepnutí otevře formulář, dlouhý stisk nabídne šablony
+    naSlys($('tl-pridat'), 'click', function () {
+      if (bylDlouhy) { bylDlouhy = false; return; }
+      zaloz('vydaj'); otevriZaznam();
+    });
+    hlidejDlouhyStisk($('tl-pridat'), otevriSablony);
+
+    naSlys($('sablony-zrusit'), 'click', function () { $('prekryv-sablony').hidden = true; });
+    naSlys($('sablony-prazdny'), 'click', function () {
+      $('prekryv-sablony').hidden = true;
+      zaloz('vydaj'); otevriZaznam();
+    });
+    naSlys($('prekryv-sablony'), 'click', function (e) {
+      if (e.target === $('prekryv-sablony')) $('prekryv-sablony').hidden = true;
+    });
+    naSlys($('seznam-sablon'), 'click', function (e) {
+      var b = e.target.closest('[data-sablona]');
+      if (b) zapisZeSablony(Number(b.getAttribute('data-sablona')));
+    });
+
+    // dnes a tento týden -> historie za to období
+    naSlys($('hero-dnes'), 'click', function () { rozsahDoHistorie('dnes'); });
+    naSlys($('hero-tyden'), 'click', function () { rozsahDoHistorie('tyden'); });
 
     // formulář záznamu
     naSlys($('zaznam-zrusit'), 'click', zavriZaznam);
@@ -877,7 +1147,9 @@
     naSlys($('filtr-aktivni'), 'click', function (e) {
       var b = e.target.closest('[data-zrus]');
       if (!b) return;
-      filtr[b.getAttribute('data-zrus')] = null;
+      var co = b.getAttribute('data-zrus');
+      if (co === 'rozsah') { filtr.rozsah = 'mesic'; obnovChipy(); }
+      else filtr[co] = null;
       vykresliHistorii();
     });
 
@@ -932,6 +1204,19 @@
       nastavTema(D.stav().nastaveni.tema);
       vykresliNastaveni();
     });
+    // zabezpečení
+    naSlys($('stav-zamku'), 'click', function (e) {
+      var b = e.target.closest('[data-zamek]');
+      if (b) { obsluhaZabezpeceni(b.getAttribute('data-zamek')); return; }
+      if (e.target.id === 'tl-zapni-zamek') global.FZamek.zapniZamek();
+    });
+    naSlys($('stav-zamku'), 'change', function (e) {
+      if (e.target.id !== 'pole-zamekpo') return;
+      D.stav().nastaveni.zamekPo = Number(e.target.value);
+      D.ulozHned();
+      hlaska('Uloženo.');
+    });
+
     naSlys($('pole-mena'), 'change', function () {
       D.stav().nastaveni.mena = this.value.trim() || 'Kč';
       D.ulozHned();
@@ -1008,6 +1293,12 @@
     otevriZaznam();
   }
 
+  function rozsahDoHistorie(r) {
+    filtr.rozsah = r; filtr.typ = 'vse'; filtr.kat = null; filtr.ucet = null; filtr.text = '';
+    obnovChipy();
+    jdi('historie');
+  }
+
   function obnovChipy() {
     vse('#chipy-typ .chip').forEach(function (b) {
       b.classList.toggle('chip-akt', b.getAttribute('data-typ') === filtr.typ);
@@ -1068,31 +1359,40 @@
   global.F = {
     chybaUlozeni: function () {
       hlaska('Úložiště telefonu je plné, data se neuložila.');
-    }
+    },
+    // volá zámek po každém dalším odemčení
+    poOdemceni: function () { spustAplikaci(); }
   };
 
-  function start() {
-    D.nacti();
-    var s = D.stav();
+  var zapojeno = false;
 
+  /** Běží po odemčení – tehdy jsou teprve data v paměti. */
+  function spustAplikaci() {
+    var s = D.stav();
     nastavTema(s.nastaveni.tema || 'auto');
 
     var dnes = new Date();
     rok = dnes.getFullYear();
     mesic = dnes.getMonth();
+    mesicVGrafu = 5;
+    filtr = { typ: 'vse', rozsah: 'mesic', text: '', kat: null, ucet: null };
 
     var pridano = D.dopisPravidelne();
 
-    zapojUdalosti();
+    if (!zapojeno) { zapojUdalosti(); zapojeno = true; }
     obnovChipy();
     jdi('prehled');
 
     if (pridano) hlaska('Zapsáno ' + pridano + ' pravidelných plateb.');
+  }
 
+  function start() {
     // servisní vrstva pro běh bez signálu
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       navigator.serviceWorker.register('sw.js').catch(function () {});
     }
+    // data jsou zamčená; aplikace se rozjede až po zadání PINu
+    global.FZamek.start(spustAplikaci);
   }
 
   if (document.readyState === 'loading') {

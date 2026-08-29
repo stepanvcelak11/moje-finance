@@ -32,6 +32,16 @@
       <div class="hero-popis">Zůstatek celkem</div>
       <div class="hero-cislo" id="hero-zustatek">0 Kč</div>
       <div class="hero-radek" id="hero-uctu"></div>
+      <div class="hero-dnes">
+        <button class="hero-dnes-dil" id="hero-dnes">
+          <span class="hero-dnes-popis">Dnes</span>
+          <span class="hero-dnes-cislo">0 Kč</span>
+        </button>
+        <button class="hero-dnes-dil" id="hero-tyden">
+          <span class="hero-dnes-popis">Tento týden</span>
+          <span class="hero-dnes-cislo">0 Kč</span>
+        </button>
+      </div>
     </div>
 
     <div class="dvojice">
@@ -51,9 +61,13 @@
       <div class="karta-hlava">
         <h2>Zůstalo za měsíc</h2>
       </div>
-      <div class="rozdil-cislo" id="souhrn-rozdil">0 Kč</div>
-      <div class="rozdil-pruh"><div class="rozdil-vypln" id="rozdil-vypln"></div></div>
-      <div class="rozdil-pod" id="souhrn-rozdil-pod">Zatím žádné záznamy v tomto měsíci.</div>
+      <div class="rozdil-blok">
+        <div class="prstenec" id="prstenec"></div>
+        <div class="rozdil-text">
+          <div class="rozdil-cislo" id="souhrn-rozdil">0 Kč</div>
+          <div class="rozdil-pod" id="souhrn-rozdil-pod">Zatím žádné záznamy v tomto měsíci.</div>
+        </div>
+      </div>
     </div>
 
     <div class="karta" id="karta-kategorie">
@@ -155,6 +169,11 @@
       </div>
       <p class="napoveda napoveda-nahore">Nájem, telefon, pojistka… Aplikace je zapíše sama, jakmile nastane den v měsíci.</p>
       <div id="seznam-pravidelnych"></div>
+    </div>
+
+    <div class="karta" id="karta-zabezpeceni">
+      <div class="karta-hlava"><h2>Zabezpečení</h2></div>
+      <div id="stav-zamku"></div>
     </div>
 
     <div class="karta">
@@ -259,10 +278,43 @@
   </div>
 </div>
 
+<!-- ============ ŠABLONY (dlouhý stisk na +) ============ -->
+<div class="prekryv" id="prekryv-sablony" hidden>
+  <div class="list list-nizky" role="dialog" aria-modal="true" aria-label="Rychlý zápis">
+    <div class="list-hlava">
+      <button class="list-zavrit" id="sablony-zrusit">Zavřít</button>
+      <strong>Rychlý zápis</strong>
+      <span style="width:52px"></span>
+    </div>
+    <div class="list-telo">
+      <p class="napoveda napoveda-nahore">Jedno klepnutí zapíše záznam s dnešním datem. Pokud se spletete, hláska nabídne vrácení.</p>
+      <div id="seznam-sablon"></div>
+      <button class="tl tl-siroke" id="sablony-prazdny" style="margin-top:12px">Radši vyplnit ručně</button>
+    </div>
+  </div>
+</div>
+
 <div class="hlaska" id="hlaska" hidden></div>
+
+<!-- ============ ZÁMEK ============ -->
+<div class="zamek" id="zamek" hidden>
+  <div class="zamek-vnitrek" id="zamek-vnitrek">
+    <div class="zamek-znak">🔒</div>
+    <h1 class="zamek-nadpis" id="zamek-nadpis">Moje finance</h1>
+    <p class="zamek-popis" id="zamek-popis">Zadejte PIN</p>
+    <div class="zamek-tecky" id="zamek-tecky"></div>
+    <p class="zamek-chyba" id="zamek-chyba">&nbsp;</p>
+    <div class="klavesnice" id="klavesnice"></div>
+    <p class="zamek-poznamka" id="zamek-poznamka" hidden>
+      PINem se data v telefonu zašifrují. <b>Zapomenutý PIN nejde obnovit</b> –
+      stáhněte si čas od času zálohu ve <i>Víc → Data</i>.
+    </p>
+  </div>
+</div>
 
 <script src="js/data.js"></script>
 <script src="js/grafy.js"></script>
+<script src="js/zamek.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

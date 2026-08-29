@@ -5,7 +5,7 @@
    jinak telefon podrží starou verzi z mezipaměti.
    --------------------------------------------------------------- */
 
-var VERZE = 'moje-finance-v1';
+var VERZE = 'moje-finance-v2';
 
 var SOUBORY = [
   './',
@@ -13,6 +13,7 @@ var SOUBORY = [
   './css/styl.css',
   './js/data.js',
   './js/grafy.js',
+  './js/zamek.js',
   './js/app.js',
   './manifest.webmanifest',
   './ikony/ikona-192.png',

@@ -65,18 +65,38 @@
     return html + '</div>';
   }
 
+  var TREND_PRAH = 0.25;   // menší výkyv není zpráva, jen šum
+  var TREND_RADKU = 5;     // a u drobných položek nikoho nezajímá
+
+  /**
+   * Odznak „proti obvyklému“: o kolik se kategorie liší od průměru
+   * předchozích měsíců za stejně dlouhý úsek. Záměrně skoupý – kdyby
+   * visel u každého řádku, přestane si ho člověk všímat.
+   */
+  function trendOdznak(t, poradi) {
+    if (!t || poradi >= TREND_RADKU || Math.abs(t.podil) < TREND_PRAH) return '';
+    var nahoru = t.podil > 0;
+    var procent = Math.round(Math.abs(t.podil) * 100);
+    var popis = (nahoru ? 'O ' + procent + ' % víc' : 'O ' + procent + ' % míň') +
+      ' než průměr ' + t.mesicu + ' předchozích měsíců' +
+      (t.cely ? '' : ' za prvních ' + t.dni + ' dní');
+    return '<span class="kat-trend ' + (nahoru ? 'kat-trend-vys' : 'kat-trend-niz') +
+      '" title="' + esc(popis) + '">' + (nahoru ? '↑' : '↓') + ' ' + procent + ' %</span>';
+  }
+
   /** Žebříček kategorií: ikona, název, pruh, částka, podíl. */
-  function seznamKategorii(polozky, formatuj) {
+  function seznamKategorii(polozky, formatuj, trendy) {
     var celkem = polozky.reduce(function (a, p) { return a + p.castka; }, 0);
     if (!celkem) return '';
     var max = polozky[0] ? polozky[0].castka : 1;
-    return polozky.map(function (p) {
+    return polozky.map(function (p, poradi) {
       var podil = p.castka / celkem * 100;
       var sirka = Math.max(2, p.castka / max * 100);
       return '<button class="kat-radek" data-kat="' + esc(p.kat) + '">' +
         '<span class="kat-ikona">' + esc(p.ikona) + '</span>' +
         '<span>' +
-          '<span class="kat-jmeno">' + esc(p.nazev) + '</span>' +
+          '<span class="kat-jmeno">' + esc(p.nazev) +
+            trendOdznak(trendy && trendy[p.kat], poradi) + '</span>' +
           '<span class="kat-pruh"><span class="kat-vypln" style="width:' + sirka.toFixed(1) +
             '%;background:' + barva(p.barva) + '"></span></span>' +
         '</span>' +
@@ -116,8 +136,27 @@
     return html;
   }
 
+  /**
+   * Prstencový ukazatel: jeden poměr proti stropu (utraceno z příjmů).
+   * Číslo uprostřed nese význam, barva ho jen podtrhuje.
+   */
+  function prstenec(podil, vypln, hlavni, pod) {
+    var R = 42;
+    var obvod = 2 * Math.PI * R;
+    var kus = Math.max(0, Math.min(1, podil)) * obvod;
+    return '<svg class="prstenec-svg" viewBox="0 0 100 100" role="img" aria-label="' +
+        esc(hlavni + ' ' + pod) + '">' +
+      '<circle class="prstenec-draha" cx="50" cy="50" r="' + R + '"></circle>' +
+      '<circle class="prstenec-cara" cx="50" cy="50" r="' + R +
+        '" style="stroke:' + vypln + ';stroke-dasharray:' + kus.toFixed(2) + ' ' +
+        (obvod - kus).toFixed(2) + '"></circle>' +
+    '</svg>' +
+    '<span class="prstenec-stred"><b>' + esc(hlavni) + '</b><span>' + esc(pod) + '</span></span>';
+  }
+
   global.FGrafy = {
     barva: barva,
+    prstenec: prstenec,
     esc: esc,
     slozDily: slozDily,
     pruhPodilu: pruhPodilu,

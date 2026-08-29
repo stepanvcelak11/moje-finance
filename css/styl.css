@@ -153,11 +153,36 @@ body.bez-hlavicky { padding-top: env(safe-area-inset-top); }
 .prijem { color: var(--prijem); }
 .vydaj { color: var(--vydaj); }
 
-/* ---------------- rozdíl ---------------- */
-.rozdil-cislo { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
-.rozdil-pruh { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin: 10px 0 8px; display: flex; }
-.rozdil-vypln { height: 100%; border-radius: 999px; background: var(--vydaj); transition: width .3s ease; }
-.rozdil-pod { font-size: 12px; color: var(--ink-2); }
+/* ---------------- dnes a týden ---------------- */
+.hero-dnes { display: flex; gap: 10px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+.hero-dnes-dil {
+  flex: 1; border: 0; background: transparent; border-radius: 12px; padding: 4px 2px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.hero-dnes-dil:active { background: var(--surface-2); }
+.hero-dnes-dil + .hero-dnes-dil { border-left: 1px solid var(--line); }
+.hero-dnes-popis { display: block; font-size: 11px; color: var(--ink-3); }
+.hero-dnes-cislo { display: block; font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+/* ---------------- rozdíl s prstencem ---------------- */
+.rozdil-blok { display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: center; }
+.rozdil-text { min-width: 0; }
+.rozdil-cislo { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.rozdil-pod { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.prstenec { position: relative; width: 104px; height: 104px; }
+.prstenec-svg { width: 104px; height: 104px; transform: rotate(-90deg); }
+.prstenec-draha { fill: none; stroke: var(--surface-2); stroke-width: 10; }
+.prstenec-cara { fill: none; stroke-width: 10; stroke-linecap: round; transition: stroke-dasharray .4s ease; }
+.prstenec-stred {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1px; pointer-events: none;
+}
+.prstenec-stred b { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.prstenec-stred span { font-size: 10px; color: var(--ink-3); }
+@media (max-width: 359px) {
+  .rozdil-blok { grid-template-columns: 84px 1fr; }
+  .prstenec, .prstenec-svg { width: 84px; height: 84px; }
+}
 
 /* ---------------- graf podílu ---------------- */
 .podil-pruh { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; margin-bottom: 14px; }
@@ -408,6 +433,85 @@ body.bez-hlavicky { padding-top: env(safe-area-inset-top); }
 .editor-radek .pravidelna-pod { display: inline; }
 .pravidelna-castka { font-variant-numeric: tabular-nums; font-weight: 650; }
 .smaz-x { border: 0; background: transparent; color: var(--ink-3); font-size: 19px; padding: 2px 6px; }
+
+/* ---------------- trend kategorie ---------------- */
+.kat-trend {
+  display: inline-block; font-size: 10px; font-weight: 700; margin-left: 5px;
+  padding: 1px 5px; border-radius: 999px; white-space: nowrap;
+}
+.kat-trend-vys { background: color-mix(in srgb, var(--vydaj) 16%, transparent); color: var(--vydaj); }
+.kat-trend-niz { background: color-mix(in srgb, var(--prijem) 16%, transparent); color: var(--prijem); }
+
+/* ---------------- šablony ---------------- */
+.list-nizky { max-height: 78vh; }
+.sablona {
+  display: grid; grid-template-columns: 42px 1fr auto; gap: 12px; align-items: center;
+  width: 100%; text-align: left; padding: 12px 13px; margin-bottom: 9px;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+}
+.sablona:active { background: var(--surface-2); }
+.sablona > span { display: block; min-width: 0; }
+.sablona-ikona { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; font-size: 21px; }
+.sablona-nazev { display: block; font-size: 15px; font-weight: 600; }
+.sablona-pod { display: block; font-size: 12px; color: var(--ink-3); }
+.sablona-castka { display: block; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------------- hláška s tlačítkem ---------------- */
+.hlaska { display: flex; align-items: center; gap: 12px; }
+.hlaska-zpet {
+  border: 0; background: transparent; color: var(--akcent); font-weight: 700;
+  font-size: 14px; padding: 2px 0; flex-shrink: 0;
+}
+:root[data-tema="dark"] .hlaska-zpet { color: #7db4f5; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="light"]) .hlaska-zpet { color: #7db4f5; } }
+
+/* ---------------- zámek ---------------- */
+body.zamceno #obsah,
+body.zamceno .spodni,
+body.zamceno .hlavicka { display: none !important; }
+
+.zamek {
+  position: fixed; inset: 0; z-index: 300; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.zamek-vnitrek { width: 100%; max-width: 330px; text-align: center; }
+.zamek-vnitrek.trese { animation: trest .34s ease; }
+@keyframes trest {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(3px); }
+}
+.zamek-znak { font-size: 34px; line-height: 1; }
+.zamek-nadpis { font-size: 21px; margin: 10px 0 4px; font-weight: 700; }
+.zamek-popis { font-size: 14px; color: var(--ink-2); margin: 0; }
+.zamek-tecky { display: flex; gap: 13px; justify-content: center; margin: 22px 0 6px; }
+.tecka-pin {
+  width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--ink-3);
+  transition: background .12s ease, border-color .12s ease, transform .12s ease;
+}
+.tecka-pin.plna { background: var(--akcent); border-color: var(--akcent); transform: scale(1.12); }
+.zamek-chyba { font-size: 13px; color: var(--vydaj); min-height: 20px; margin: 0 0 10px; font-weight: 600; }
+.klavesnice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.kl-tl {
+  border: 0; background: var(--surface); border-radius: 50%;
+  aspect-ratio: 1; max-height: 74px; font-size: 25px; font-weight: 500;
+  box-shadow: var(--stin); display: grid; place-items: center;
+}
+.kl-tl:active { background: var(--surface-3); transform: scale(.94); }
+.kl-vedlejsi { background: transparent; box-shadow: none; font-size: 21px; color: var(--ink-2); }
+.kl-tl[disabled] { opacity: .3; }
+.zamek-poznamka { font-size: 11px; color: var(--ink-3); line-height: 1.6; margin: 18px 0 0; }
+
+/* ---------------- zabezpečení v nastavení ---------------- */
+.zamek-radek { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.zamek-radek:first-child { border-top: 0; }
+.zamek-radek > span { min-width: 0; }
+.zamek-radek b { display: block; font-size: 14px; font-weight: 600; }
+.zamek-radek i { display: block; font-size: 12px; color: var(--ink-3); font-style: normal; }
 
 @media (min-width: 520px) {
   .kat-mrizka { grid-template-columns: repeat(5, 1fr); }

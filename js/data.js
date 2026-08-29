@@ -5,8 +5,13 @@
 (function (global) {
   'use strict';
 
-  var KLIC = 'moje-finance-v1';
+  var KLIC = 'moje-finance-v1';        // nešifrovaná data (zámek vypnutý)
+  var TREZOR = 'moje-finance-trezor-v1'; // zašifrovaná data (zámek zapnutý)
   var VERZE_DAT = 1;
+
+  // Šifra dodaná modulem zámku: { zasifruj(text) -> Promise<string>,
+  // desifruj(text) -> Promise<string> }. Když je null, ukládá se načisto.
+  var sifra = null;
 
   /* ---------- výchozí obsah ---------- */
 
@@ -100,13 +105,28 @@
 
   var stav = null;
 
-  function nacti() {
-    var syrove = null;
-    try { syrove = global.localStorage.getItem(KLIC); } catch (e) { syrove = null; }
-    if (!syrove) { stav = vychoziStav(); return stav; }
+  function cti(klic) {
+    try { return global.localStorage.getItem(klic); } catch (e) { return null; }
+  }
+
+  function zapis(klic, hodnota) {
+    try { global.localStorage.setItem(klic, hodnota); return true; }
+    catch (e) {
+      if (global.F && global.F.chybaUlozeni) global.F.chybaUlozeni(e);
+      return false;
+    }
+  }
+
+  function smaz(klic) {
+    try { global.localStorage.removeItem(klic); } catch (e) { /* nevadí */ }
+  }
+
+  /** Poskládá stav z rozbaleného JSONu; při nesmyslu vrátí výchozí. */
+  function nactiZTextu(text) {
+    var z = vychoziStav();
+    if (!text) { stav = z; return stav; }
     try {
-      var d = JSON.parse(syrove);
-      var z = vychoziStav();
+      var d = JSON.parse(text);
       stav = {
         verze: VERZE_DAT,
         transakce: Array.isArray(d.transakce) ? d.transakce : [],
@@ -117,12 +137,27 @@
         nastaveni: Object.assign({}, z.nastaveni, d.nastaveni || {})
       };
     } catch (e) {
-      stav = vychoziStav();
+      stav = z;
     }
     return stav;
   }
 
+  /** Načte nešifrovaná data (režim bez zámku). */
+  function nacti() { return nactiZTextu(cti(KLIC)); }
+
+  function nastavSifru(s) { sifra = s || null; }
+  function jeSifrovano() { return !!sifra; }
+  function syrovyTrezor() { return cti(TREZOR); }
+  function syrovaData() { return cti(KLIC); }
+  function zapisTrezor(obal) { return zapis(TREZOR, obal); }
+  function smazPlain() { smaz(KLIC); }
+  function smazTrezor() { smaz(TREZOR); }
+
+  /** Zapomene rozbalená data z paměti (při zamčení). */
+  function zavri() { stav = null; sifra = null; }
+
   var cekaUlozeni = null;
+  var fronta = Promise.resolve();   // zápisy jdou za sebou, ne přes sebe
 
   function uloz() {
     if (cekaUlozeni) clearTimeout(cekaUlozeni);
@@ -130,14 +165,26 @@
   }
 
   function ulozHned() {
-    cekaUlozeni = null;
-    try {
-      global.localStorage.setItem(KLIC, JSON.stringify(stav));
-      return true;
-    } catch (e) {
+    if (cekaUlozeni) { clearTimeout(cekaUlozeni); cekaUlozeni = null; }
+    if (!stav) return Promise.resolve(false);
+    var text = JSON.stringify(stav);
+    if (!sifra) {
+      return Promise.resolve(zapis(KLIC, text));
+    }
+    fronta = fronta.then(function () {
+      return sifra.zasifruj(text);
+    }).then(function (obal) {
+      return zapis(TREZOR, obal);
+    }).catch(function (e) {
       if (global.F && global.F.chybaUlozeni) global.F.chybaUlozeni(e);
       return false;
-    }
+    });
+    return fronta;
+  }
+
+  /** Počká, až doběhnou všechny rozepsané zápisy (před zamčením). */
+  function dopisAVycti() {
+    return ulozHned().then(function () { return fronta; });
   }
 
   function noveId(predpona) {
@@ -293,6 +340,122 @@
       .sort(function (a, b) { return b.podil - a.podil; });
   }
 
+  /* ---------- dnes a tento týden ---------- */
+
+  /** Pondělí týdne, do kterého spadá zadané datum (u nás začíná týden pondělím). */
+  function pondeli(d) {
+    var k = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    var posun = (k.getDay() + 6) % 7;
+    k.setDate(k.getDate() - posun);
+    return k;
+  }
+
+  /** Souhrn za rozsah dat včetně obou krajů (ISO řetězce). */
+  function souhrnRozsah(od, doKdy) {
+    return souhrn(stav.transakce.filter(function (t) {
+      return t.datum >= od && t.datum <= doKdy;
+    }));
+  }
+
+  function souhrnDnes() {
+    var d = dnesISO();
+    return souhrnRozsah(d, d);
+  }
+
+  function souhrnTydne() {
+    var dnes = new Date();
+    return souhrnRozsah(naISO(pondeli(dnes)), naISO(dnes));
+  }
+
+  /* ---------- trend kategorií ---------- */
+
+  /**
+   * Srovná útratu kategorie za tento měsíc s průměrem předchozích šesti.
+   * U rozdělaného měsíce porovnává stejně dlouhý úsek (do stejného dne),
+   * jinak by rozdělaný měsíc vždycky vycházel jako úspora.
+   * Vrací mapu id kategorie -> { prumer, podil, dni }.
+   */
+  function trendyKategorii(rok, mesic) {
+    var dnes = new Date();
+    var jeAktualni = (dnes.getFullYear() === rok && dnes.getMonth() === mesic);
+    var poslDen = new Date(rok, mesic + 1, 0).getDate();
+    var doDne = jeAktualni ? dnes.getDate() : poslDen;
+
+    var ted = {}, drive = {}, meliDataMesice = {};
+    for (var i = 0; i < stav.transakce.length; i++) {
+      var t = stav.transakce[i];
+      var r = +t.datum.slice(0, 4), m = +t.datum.slice(5, 7) - 1, d = +t.datum.slice(8, 10);
+      var odstup = (rok - r) * 12 + (mesic - m);
+      if (odstup >= 1 && odstup <= 6) meliDataMesice[odstup] = true;
+      if (t.typ !== 'vydaj' || d > doDne) continue;
+      if (odstup === 0) ted[t.kat] = (ted[t.kat] || 0) + t.castka;
+      else if (odstup >= 1 && odstup <= 6) drive[t.kat] = (drive[t.kat] || 0) + t.castka;
+    }
+
+    var pocetMesicu = Object.keys(meliDataMesice).length;
+    var vysledek = {};
+    if (!pocetMesicu) return vysledek;
+
+    Object.keys(ted).forEach(function (kat) {
+      var prumer = (drive[kat] || 0) / pocetMesicu;
+      if (prumer <= 0) return;                       // dřív se v kategorii neutrácelo
+      vysledek[kat] = {
+        prumer: prumer,
+        podil: ted[kat] / prumer - 1,
+        dni: doDne,
+        mesicu: pocetMesicu,
+        cely: !jeAktualni
+      };
+    });
+    return vysledek;
+  }
+
+  /* ---------- šablony rychlého zápisu ---------- */
+
+  function median(pole) {
+    var s = pole.slice().sort(function (a, b) { return a - b; });
+    var p = Math.floor(s.length / 2);
+    return s.length % 2 ? s[p] : (s[p - 1] + s[p]) / 2;
+  }
+
+  /**
+   * Nejčastější kombinace typ + kategorie + účet za poslední tři měsíce.
+   * Částka = nejčastější přesná hodnota, jinak medián.
+   */
+  function sablony(kolik) {
+    var hranice = new Date();
+    hranice.setDate(hranice.getDate() - 90);
+    var od = naISO(hranice);
+
+    var mapa = {};
+    stav.transakce.forEach(function (t) {
+      if (t.typ === 'prevod' || t.datum < od) return;
+      var k = t.typ + '|' + t.kat + '|' + t.ucet;
+      if (!mapa[k]) mapa[k] = { typ: t.typ, kat: t.kat, ucet: t.ucet, pocet: 0, castky: [] };
+      mapa[k].pocet++;
+      mapa[k].castky.push(t.castka);
+    });
+
+    return Object.keys(mapa).map(function (k) {
+      var z = mapa[k];
+      var cetnost = {}, nej = null, nejPocet = 0;
+      z.castky.forEach(function (c) {
+        cetnost[c] = (cetnost[c] || 0) + 1;
+        if (cetnost[c] > nejPocet) { nejPocet = cetnost[c]; nej = c; }
+      });
+      z.castka = nejPocet >= 2 ? Number(nej) : Math.round(median(z.castky));
+      var kat = kategorie(z.kat);
+      z.nazev = kat.nazev;
+      z.ikona = kat.ikona;
+      z.barva = kat.barva;
+      return z;
+    }).filter(function (z) {
+      return z.pocet >= 2 && z.castka > 0;
+    }).sort(function (a, b) {
+      return b.pocet - a.pocet;
+    }).slice(0, kolik || 3);
+  }
+
   /* ---------- pravidelné platby ---------- */
 
   /** Doplní chybějící pravidelné platby za uplynulé měsíce. Vrátí počet přidaných. */
@@ -395,6 +558,16 @@
     MESICE: MESICE,
     MESICE_KRATCE: MESICE_KRATCE,
     nacti: nacti,
+    nactiZTextu: nactiZTextu,
+    nastavSifru: nastavSifru,
+    jeSifrovano: jeSifrovano,
+    syrovyTrezor: syrovyTrezor,
+    syrovaData: syrovaData,
+    zapisTrezor: zapisTrezor,
+    smazPlain: smazPlain,
+    smazTrezor: smazTrezor,
+    zavri: zavri,
+    dopisAVycti: dopisAVycti,
     uloz: uloz,
     ulozHned: ulozHned,
     stav: function () { return stav; },
@@ -420,6 +593,11 @@
     podleKategorii: podleKategorii,
     poslednichMesicu: poslednichMesicu,
     stavRozpoctu: stavRozpoctu,
+    souhrnRozsah: souhrnRozsah,
+    souhrnDnes: souhrnDnes,
+    souhrnTydne: souhrnTydne,
+    trendyKategorii: trendyKategorii,
+    sablony: sablony,
     dopisPravidelne: dopisPravidelne,
     doJson: doJson,
     doCsv: doCsv,
