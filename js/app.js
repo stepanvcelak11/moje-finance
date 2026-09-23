@@ -8,7 +8,7 @@
   var G = global.FGrafy;
   var esc = G.esc;
 
-  var VERZE = '2.0';
+  var VERZE = '2.1';
 
   /* ---------- krátké pomůcky ---------- */
 
@@ -191,8 +191,20 @@
     $('hero-popis').textContent = 'Utraceno ' + (jeAktualni ? 'tento měsíc' : 'v ' + D.MESICE_V[mesic].toLowerCase());
     $('hero-utraceno').textContent = kc(Math.round(souhrn.vydaje));
     $('hero-prijmy').innerHTML = souhrn.prijmy
-      ? 'příjmy <b class="prijem">' + esc(kc(souhrn.prijmy)) + '</b>'
-      : 'příjem zatím nezapsaný';
+      ? 'z příjmů <b>' + esc(kc(Math.round(souhrn.prijmy))) + '</b>'
+      : 'příjem tento měsíc zatím nezapsaný';
+
+    // srovnání s minulým měsícem (do stejného dne)
+    var sr = D.srovnaniSMinulym(rok, mesic);
+    var elSr = $('hero-srovnani');
+    if (sr.podil !== null && sr.ted > 0 && Math.abs(sr.podil) >= 0.03) {
+      var mene = sr.podil < 0;
+      elSr.className = 'hero-srovnani ' + (mene ? 'lepsi' : 'horsi');
+      elSr.innerHTML = (mene ? '↓ ' : '↑ ') + Math.round(Math.abs(sr.podil) * 100) + ' % ' +
+        (mene ? 'méně' : 'víc') + ' než ' + (sr.doDne ? 'touhle dobou ' : '') + 'v ' +
+        esc(D.MESICE_V[sr.mesic].toLowerCase());
+      elSr.hidden = false;
+    } else elSr.hidden = true;
     $('hero-zustatek').textContent = kc(D.celkovyZustatek());
 
     // dnes a tento týden
@@ -205,30 +217,32 @@
     var procenta = Math.round(podilUtraty * 100);
     var barvaPrstence, stred, podStredem;
     if (!souhrn.prijmy && !souhrn.vydaje) {
-      barvaPrstence = 'var(--ink-3)'; stred = '—'; podStredem = 'zatím nic';
+      barvaPrstence = 'rgba(255,255,255,.5)'; stred = '—'; podStredem = 'zatím nic';
     } else if (!souhrn.prijmy) {
-      barvaPrstence = 'var(--vydaj)'; stred = '—'; podStredem = 'bez příjmu';
+      barvaPrstence = '#ffb3b3'; stred = '—'; podStredem = 'bez příjmu';
     } else {
-      barvaPrstence = podilUtraty >= 1 ? 'var(--vydaj)'
-        : (podilUtraty >= 0.8 ? 'var(--varovani)' : 'var(--prijem)');
+      barvaPrstence = podilUtraty >= 1 ? '#ffb3b3'
+        : (podilUtraty >= 0.8 ? '#ffd27a' : '#ffffff');
       stred = procenta + ' %'; podStredem = 'z příjmů';
     }
     $('prstenec').innerHTML = G.prstenec(podilUtraty, barvaPrstence, stred, podStredem);
 
     var pod = '';
     if (souhrn.prijmy > 0 && souhrn.rozdil >= 0) {
-      pod = 'Zbývá <b class="prijem">' + esc(kc(souhrn.rozdil)) + '</b>';
+      pod = 'Zbývá <b>' + esc(kc(Math.round(souhrn.rozdil))) + '</b>';
       var dni = pocetDniZbyva();
       if (dni > 0) pod += ' · ' + dni + ' ' + tvarDni(dni) + ' do konce měsíce, to je <b>' +
         esc(kc(Math.floor(souhrn.rozdil / dni))) + '</b> na den';
     } else if (souhrn.prijmy > 0) {
-      pod = 'Výdaje jsou o <b class="vydaj">' + esc(kc(-souhrn.rozdil)) + '</b> vyšší než příjmy.';
+      pod = 'Výdaje jsou o <b>' + esc(kc(Math.round(-souhrn.rozdil))) + '</b> vyšší než příjmy.';
     }
     $('souhrn-rozdil-pod').innerHTML = pod;
     $('souhrn-rozdil-pod').hidden = !pod;
 
     vykresliRychle();
     vykresliPripominkuImportu();
+    vykresliObchody(vMesici);
+    vykresliPredplatne();
 
     // kategorie
     var kategorie = D.podleKategorii(vMesici, 'vydaj');
@@ -249,6 +263,50 @@
     $('posledni-pohyby').innerHTML = posledni.length
       ? '<div class="skupina-karta">' + posledni.map(polozkaHtml).join('') + '</div>'
       : '<p class="prazdno">Zatím nic. Přidejte první záznam tlačítkem +.</p>';
+  }
+
+  /** Kde nejvíc utrácíte – obchody za vybraný měsíc. */
+  function vykresliObchody(vMesici) {
+    var obchody = D.podleObchodu(vMesici);
+    var karta = $('karta-obchody');
+    // má smysl až od pár pojmenovaných nákupů
+    karta.hidden = obchody.length < 3;
+    if (karta.hidden) return;
+    var max = obchody[0].castka || 1;
+    $('obchody-doplnek').textContent = obchody.length + ' ' + (obchody.length < 5 ? 'obchody' : 'obchodů');
+    $('seznam-obchodu').innerHTML = obchody.slice(0, 5).map(function (o) {
+      var b = G.barva(o.barva);
+      return '<button class="kat-radek obchod-radek" data-obchod="' + esc(o.nazev) + '">' +
+        '<span class="obchod-ikona" style="color:' + b + ';background:color-mix(in srgb,' + b +
+          ' 16%, var(--surface-2))">' + ik(o.ikona) + '</span>' +
+        '<span><span class="kat-jmeno">' + esc(o.nazev) + '</span>' +
+          '<span class="kat-pruh"><span class="kat-vypln" style="width:' +
+          (o.castka / max * 100).toFixed(1) + '%;background:' + b + '"></span></span></span>' +
+        '<span><span class="kat-castka">' + esc(kc(Math.round(o.castka))) + '</span>' +
+          '<span class="kat-procenta">' + o.pocet + '× nákup</span></span>' +
+      '</button>';
+    }).join('');
+  }
+
+  /** Pravidelně odchází – předplatné, nájem, inkasa poznaná z historie. */
+  function vykresliPredplatne() {
+    var seznam = D.pravidelnePlatby();
+    var karta = $('karta-predplatne');
+    karta.hidden = seznam.length === 0;
+    if (karta.hidden) return;
+    var soucet = seznam.reduce(function (a, p) { return a + p.castka; }, 0);
+    $('predplatne-soucet').textContent = '≈ ' + kc(Math.round(soucet)) + ' měsíčně';
+    $('seznam-predplatneho').innerHTML = seznam.slice(0, 6).map(function (p) {
+      var b = G.barva(p.barva);
+      return '<div class="predplatne-radek">' +
+        '<span class="obchod-ikona" style="color:' + b + ';background:color-mix(in srgb,' + b +
+          ' 16%, var(--surface-2))">' + ik(p.ikona) + '</span>' +
+        '<span><span class="kat-jmeno">' + esc(p.nazev) + '</span>' +
+          '<span class="predplatne-pod">další asi ' + esc(D.popisDne(p.dalsi).split(' · ')[0]) + '</span></span>' +
+        '<span class="kat-castka">' + esc(kc(p.castka)) + '</span>' +
+      '</div>';
+    }).join('') + (seznam.length > 6
+      ? '<p class="napoveda" style="margin:4px 0 0">a ještě ' + (seznam.length - 6) + ' další</p>' : '');
   }
 
   function tvarDni(n) { return n === 1 ? 'den' : (n >= 2 && n <= 4 ? 'dny' : 'dní'); }
@@ -347,7 +405,9 @@
       pod = D.ucet(t.ucet).nazev;
       barvaIkony = G.barva(k.barva);
     }
-    if (t.pozn) pod = t.pozn + ' · ' + pod;
+    // z výpisu: nahoře obchod, dole kategorie – čte se to líp než „NAKUP LIDL…“ v šedém řádku
+    if (t.imp && t.pozn && t.typ !== 'prevod') { pod = nazev + ' · ' + pod; nazev = D.hezkyNazev(t.pozn); }
+    else if (t.pozn) pod = t.pozn + ' · ' + pod;
     return '<button class="polozka" data-transakce="' + esc(t.id) + '">' +
       '<span class="polozka-ikona" style="color:' + barvaIkony + ';background:color-mix(in srgb,' +
         barvaIkony + ' 18%, var(--surface-2))">' + ik(ikona) + '</span>' +
@@ -539,6 +599,10 @@
           (v ? esc(String(v)) : '') + '">' +
       '</div>';
     }).join('');
+
+    var hlidanych = Object.keys(s.rozpocty).filter(function (k) { return Number(s.rozpocty[k]) > 0; }).length;
+    $('rozpocty-souhrn').textContent = hlidanych ? 'hlídáte ' + hlidanych : 'nic nehlídáte';
+    $('kategorie-souhrn').textContent = s.kategorie.length + ' kategorií';
 
     // kategorie
     vse('#chipy-kat-typ .chip').forEach(function (b) {
@@ -1290,7 +1354,7 @@
   }
 
   function otevriImport() {
-    imp = { ucet: vychoziUcetImportu(), vynucene: null, nauceno: {} };
+    imp = { ucet: vychoziUcetImportu(), vynucene: null, nauceno: {}, banka: D.stav().nastaveni.banka || null };
     vykresliImportUvod();
     $('prekryv-import').hidden = false;
   }
@@ -1300,17 +1364,42 @@
     imp = null;
   }
 
-  function vykresliImportUvod() {
+  // Kde export v bankovnictví obvykle je. Menu se u bank mění, proto „obvykle“.
+  var BANKY = [
+    ['fio', 'Fio', 'Internetbanking → Pohyby na účtu → dole <b>Export</b> → CSV (nebo GPC).'],
+    ['cs', 'Česká spořitelna', 'George → účet → Transakce → <b>Export</b> (ikona stažení) → CSV nebo Excel.'],
+    ['kb', 'Komerční banka', 'Internetové bankovnictví → účet → Historie transakcí → <b>Export</b> → CSV.'],
+    ['csob', 'ČSOB', 'Internetbanking → Pohyby na účtu → <b>Export</b> → CSV.'],
+    ['rb', 'Raiffeisen', 'Online banking → Pohyby na účtu → <b>Exportovat</b> → CSV.'],
+    ['air', 'Air Bank', 'Internetové bankovnictví → Historie plateb → <b>Exportovat</b> → CSV.'],
+    ['mbank', 'mBank', 'Historie transakcí → <b>Stáhnout</b> → CSV.'],
+    ['moneta', 'Moneta', 'Internet Banka → Historie → <b>Export</b> → CSV nebo Excel.'],
+    ['uni', 'UniCredit', 'Online banking → Pohyby → <b>Export</b> → CSV.'],
+    ['partners', 'Partners, Creditas', 'Pohyby na účtu → <b>Export</b> → CSV nebo Excel.'],
+    ['revolut', 'Revolut', 'Aplikace → účet → ⋯ → <b>Výpis</b> (Statement) → Excel/CSV → období.'],
+    ['n26', 'N26, Wise', 'Web nebo aplikace → <b>Výpisy</b> (Statements) → CSV.'],
+    ['jina', 'Jiná', 'Hledejte <b>Export</b>, <b>Stáhnout</b> nebo <b>Výpis pohybů</b>. Bere se CSV, Excel (.xlsx) a GPC.']
+  ];
+
+  function vykresliImportUvod(chyba) {
     $('import-pata').hidden = true;
     var ucty = D.stav().ucty;
     $('import-telo').innerHTML =
+      (chyba ? '<div class="karta imp-souhrn"><div class="imp-chyba">' + esc(chyba) + '</div></div>' : '') +
       '<div class="imp-kroky">' +
         '<div class="imp-krok"><b>1</b><span>V internetovém bankovnictví otevřete pohyby na účtu a dejte ' +
-          '<i>Export</i> nebo <i>Stáhnout</i> → <b>CSV</b>. Umí to každá banka (Fio, KB a ČSOB i formát GPC – bere se taky).</span></div>' +
+          '<i>Export</i> nebo <i>Stáhnout</i> → <b>CSV</b> (bere se i Excel .xlsx a GPC). Níž vyberte banku a řeknu vám, kde to obvykle je.</span></div>' +
         '<div class="imp-krok"><b>2</b><span>Tady soubor vyberte. Appka pohyby sama roztřídí do kategorií a ukáže vám je ke kontrole.</span></div>' +
         '<div class="imp-krok"><b>3</b><span>Co opravíte, si zapamatuje. Příště už jen potvrdíte.</span></div>' +
       '</div>' +
-      '<div class="skupina-nadpis">Do kterého účtu</div>' +
+      '<div class="skupina-nadpis">Vaše banka</div>' +
+      '<div class="chipy chipy-obal banky">' + BANKY.map(function (b) {
+        return '<button class="chip' + (imp.banka === b[0] ? ' chip-akt' : '') + '" data-impbanka="' + b[0] + '">' +
+          esc(b[1]) + '</button>';
+      }).join('') + '</div>' +
+      (imp.banka ? '<p class="banka-rada">Obvykle: ' + BANKY.filter(function (b) { return b[0] === imp.banka; })[0][2] +
+        '<br><span>Menu se občas mění – když to nesedí, hledejte slovo Export.</span></p>' : '') +
+      '<div class="skupina-nadpis" style="margin-top:14px">Do kterého účtu</div>' +
       '<div class="chipy chipy-obal">' + ucty.map(function (u) {
         return '<button class="chip' + (u.id === imp.ucet ? ' chip-akt' : '') + '" data-impucet="' +
           esc(u.id) + '">' + ik(u.ikona) + esc(u.nazev) + '</button>';
@@ -1326,9 +1415,16 @@
     ctecka.onload = function () {
       if (!imp) return;
       imp.nazev = soubor.name;
-      imp.text = global.FImport.dekoduj(ctecka.result);
-      imp.vynucene = null;
-      zpracujImport();
+      global.FImport.prectiSoubor(ctecka.result).then(function (v) {
+        if (!imp) return;
+        imp.text = v.text;
+        imp.format = v.format;
+        imp.vynucene = null;
+        zpracujImport();
+      }).catch(function (e) {
+        if (!imp) return;
+        vykresliImportUvod((e && e.message) || 'Soubor se nepovedlo přečíst.');
+      });
     };
     ctecka.onerror = function () { hlaska('Soubor se nepovedlo přečíst.'); };
     ctecka.readAsArrayBuffer(soubor);
@@ -1338,7 +1434,7 @@
     var FI = global.FImport;
     var s = D.stav();
     var r;
-    try { r = FI.rozeber(imp.text, imp.vynucene); }
+    try { r = FI.rozeber(imp.text, imp.vynucene, imp.format); }
     catch (e) { r = { pohyby: [], chyba: 'Tomuhle souboru nerozumím.', hlavicka: [] }; }
     imp.rozbor = r;
 
@@ -1423,7 +1519,7 @@
     html += '</div>';
 
     // ruční přiřazení sloupců, kdyby odhad nesedl
-    if (r.format === 'CSV' && r.hlavicka && r.hlavicka.length) {
+    if (r.format !== 'GPC' && r.hlavicka && r.hlavicka.length) {
       var volby = function (vybrany, prazdna) {
         return (prazdna ? '<option value="">— nic —</option>' : '') + r.hlavicka.map(function (h, i) {
           return '<option value="' + i + '"' + (i === vybrany ? ' selected' : '') + '>' +
@@ -1585,6 +1681,12 @@
       if (!imp) return;
       var u = e.target.closest('[data-impucet]');
       if (u) { imp.ucet = u.getAttribute('data-impucet'); vykresliImportUvod(); return; }
+      var bk = e.target.closest('[data-impbanka]');
+      if (bk) {
+        imp.banka = bk.getAttribute('data-impbanka');
+        D.stav().nastaveni.banka = imp.banka; D.uloz();
+        vykresliImportUvod(); return;
+      }
       if (e.target.closest('#import-vybrat') || e.target.closest('#import-jiny')) {
         $('pole-vypis').click(); return;
       }
@@ -1747,7 +1849,7 @@
     var tmave = tema === 'dark' ||
       (tema !== 'light' && global.matchMedia && global.matchMedia('(prefers-color-scheme: dark)').matches);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', tmave ? '#101010' : '#f4f4f1');
+    if (meta) meta.setAttribute('content', tmave ? '#2b3597' : '#4b5ff0');
   }
 
   /* =================================================================
@@ -1995,6 +2097,13 @@
       ctiMesic(D.poslednichMesicu(rok, mesic, 6), mesicVGrafu);
     });
     naSlys($('posledni-pohyby'), 'click', klikNaTransakci);
+    naSlys($('seznam-obchodu'), 'click', function (e) {
+      var b = e.target.closest('[data-obchod]');
+      if (!b) return;
+      filtr = { typ: 'vydaj', rozsah: 'mesic', text: b.getAttribute('data-obchod').toLowerCase(), kat: null, ucet: null };
+      obnovChipy();
+      jdi('historie');
+    });
     naSlys($('seznam-transakci'), 'click', klikNaTransakci);
     naSlys($('seznam-rozpoctu'), 'click', function () { jdi('nastaveni'); });
 
@@ -2281,7 +2390,25 @@
     if (pridano) hlaska('Zapsáno ' + pridano + ' pravidelných plateb.');
   }
 
+  /**
+   * Výška oken podle skutečně viditelné plochy. `vh` v Safari počítá
+   * i s lištou a klávesnicí, takže list o výšce 94vh utekl nahoru.
+   */
+  function sledujViditelnouPlochu() {
+    var vv = global.visualViewport;
+    var koren = document.documentElement.style;
+    function obnov() {
+      var vyska = vv ? vv.height : global.innerHeight;
+      koren.setProperty('--plocha-vyska', Math.round(vyska) + 'px');
+      koren.setProperty('--plocha-shora', Math.round(vv ? vv.offsetTop : 0) + 'px');
+    }
+    obnov();
+    if (vv) { vv.addEventListener('resize', obnov); vv.addEventListener('scroll', obnov); }
+    global.addEventListener('resize', obnov);
+  }
+
   function start() {
+    sledujViditelnouPlochu();
     // servisní vrstva pro běh bez signálu
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       navigator.serviceWorker.register('sw.js').catch(function () {});

@@ -1,0 +1,4 @@
+"Date","Payee","Account number","Transaction type","Payment reference","Amount (EUR)","Amount (Foreign Currency)","Type Foreign Currency","Exchange Rate"
+"2026-09-02","SPAR","","MasterCard Payment","","-23.45","","",""
+"2026-09-04","Ryanair","","MasterCard Payment","","-89.99","","",""
+"2026-09-10","Max Muster","DE89370400440532013000","Income","rent share","150.00","","",""

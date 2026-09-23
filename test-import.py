@@ -169,6 +169,74 @@ with sync_playwright() as p:
     kontrola("nesmysl: srozumitelna chyba", "nenašel" in txt("#import-telo"), txt("#import-telo")[:120])
     page.click("#import-zavrit"); page.wait_for_timeout(300)
 
+    # ---------- další banky (2.1) ----------
+    DALSI = [
+        ("kb.csv", 3, [("BILLA", "Potraviny"), ("PLYNARENSKA", "Energie"), ("TESCO", "Potraviny")]),
+        ("csob.csv", 3, [("PENNY", "Potraviny"), ("SPOTIFY", "Zábava"), ("MZDA", "Výplata")]),
+        ("raiffeisen.csv", 3, [("GLOBUS", "Potraviny"), ("SVJ", "Bydlení"), ("CINEMA", "Zábava")]),
+        ("mbank.csv", 3, [("ROSSMANN", "Domácnost"), ("vratka", "Vratka"), ("MCDONALDS", "Jídlo venku")]),
+        ("moneta.csv", 3, [("NETFLIX", "Zábava"), ("BENZINA", "Auto")]),
+        ("unicredit.csv", 2, [("DR.MAX", "Zdraví")]),
+        ("partners.csv", 3, [("KAUFLAND", "Potraviny"), ("Babička", "Dar"), ("O2", "Telefon a net")]),
+        ("n26.csv", 3, [("SPAR", "Potraviny"), ("Ryanair", "Cestování")]),
+        ("wise.csv", 2, [("Starbucks", "Jídlo venku")]),
+        ("george.xlsx", 3, [("ALBERT", "Potraviny"), ("Zubní", "Zdraví"), ("ZAMESTNAVATEL", "Výplata")]),
+    ]
+    for soubor, pocet, kategorie in DALSI:
+        nacti(soubor)
+        kontrola(soubor + ": %d pohyby" % pocet, len(radky()) == pocet, len(radky()))
+        for text, kat in kategorie:
+            kontrola("%s: %s -> %s" % (soubor, text, kat), kat_radku(text) == kat, kat_radku(text))
+        if soubor == "raiffeisen.csv":
+            kontrola("raiffeisen: vlastni nazev uctu neni obchodnik", "Můj běžný účet" not in txt("#import-telo"))
+        if soubor == "unicredit.csv":
+            kontrola("unicredit: protistrana z Nazvu uctu", radek_s("Uniqa") is not None)
+        if soubor == "partners.csv":
+            kontrola("partners: vydaj ze sloupce Vydaj je zaporny", "−812,4" in radek_s("KAUFLAND").inner_text(),
+                     radek_s("KAUFLAND").inner_text())
+        if soubor == "george.xlsx":
+            kontrola("excel: datum z bunky s formatem data", "5. září" in radek_s("ALBERT").inner_text(),
+                     radek_s("ALBERT").inner_text())
+            kontrola("excel: format v souhrnu", "george.xlsx" in txt("#import-telo"))
+        page.click("#import-zavrit"); page.wait_for_timeout(250)
+
+    # starý .xls se odmítne srozumitelně
+    nacti(None, zdroj={"name": "stary.xls", "mimeType": "application/vnd.ms-excel",
+                       "buffer": bytes([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]) + b"\0" * 600})
+    kontrola("stary xls: rada ulozit jako CSV", "starý formát Excelu" in txt("#import-telo"), txt("#import-telo")[:150])
+    page.click("#import-zavrit"); page.wait_for_timeout(250)
+
+    # výběr banky ukáže radu, kde export je
+    page.click(".nav-tl[data-jdi='ucty']"); page.wait_for_timeout(250)
+    page.click("#pohled-ucty [data-akce='import']"); page.wait_for_timeout(300)
+    page.click("[data-impbanka='kb']"); page.wait_for_timeout(200)
+    kontrola("rada pro banku", "Historie transakcí" in txt("#import-telo"))
+    page.click("#import-zavrit"); page.wait_for_timeout(250)
+
+    # ---------- přehled: obchody, pravidelné platby, srovnání ----------
+    page.evaluate("""(() => {
+        const d = new Date(), iso = x => x.toISOString().slice(0, 10);
+        const m1 = new Date(d.getFullYear(), d.getMonth() - 1, 6, 12);
+        const m2 = new Date(d.getFullYear(), d.getMonth() - 2, 6, 12);
+        const m0 = new Date(d.getFullYear(), d.getMonth(), Math.min(6, d.getDate()), 12);
+        [m2, m1, m0].forEach(x => FData.pridejTransakci({datum: iso(x), castka: 299, typ: 'vydaj',
+            kat: 'k-zabava', ucet: 'u-karta', ucetDo: null, pozn: 'HBO MAX', klic: 'hbo max'}));
+        for (let i = 0; i < 4; i++) FData.pridejTransakci({datum: iso(m1), castka: 200 + i * 37, typ: 'vydaj',
+            kat: 'k-potraviny', ucet: 'u-karta', ucetDo: null, pozn: 'LIDL', klic: 'lidl'});
+    })()""")
+    page.click(".nav-tl[data-jdi='historie']"); page.wait_for_timeout(200)
+    page.click(".nav-tl[data-jdi='prehled']"); page.wait_for_timeout(400)
+    kontrola("pravidelne platby poznany", page.is_visible("#karta-predplatne") and
+             "Hbo Max" in txt("#seznam-predplatneho"), txt("#seznam-predplatneho")[:120] if page.is_visible("#karta-predplatne") else "skryto")
+    kontrola("lidl neni predplatne (vic nakupu mesicne)", "Lidl" not in txt("#seznam-predplatneho"))
+    kontrola("kde nejvic utracite", page.is_visible("#karta-obchody"), "skryto")
+    kontrola("srovnani s minulym mesicem", page.is_visible("#hero-srovnani") and
+             " než " in txt("#hero-srovnani"), txt("#hero-srovnani") if page.is_visible("#hero-srovnani") else "skryto")
+    page.click("#seznam-obchodu .obchod-radek"); page.wait_for_timeout(350)
+    kontrola("proklik z obchodu do historie", page.is_visible("#pohled-historie") and
+             page.input_value("#hledani") != "", page.input_value("#hledani"))
+    page.click(".nav-tl[data-jdi='prehled']"); page.wait_for_timeout(300)
+
     # ---------- připomínka po týdnu ----------
     page.evaluate("FData.stav().nastaveni.posledniImport = '2026-09-01'")
     page.click(".nav-tl[data-jdi='historie']"); page.wait_for_timeout(200)

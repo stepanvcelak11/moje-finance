@@ -88,4 +88,135 @@ gpc = [
 ]
 zapis('vypis.gpc', '\n'.join(gpc) + '\n', kodovani='cp1250')
 
-print('hotovo')
+# ---------------------------------------------------------------
+# Další banky (přidáno ve verzi 2.1)
+# ---------------------------------------------------------------
+
+# Komerční banka – úvodní řádky, windows-1250, obchodník v popisu příkazce
+zapis('kb.csv', '''Číslo účtu;123-4567890217/0100
+Období;01.09.2026 - 22.09.2026
+Počáteční zůstatek;15 000,00
+Konečný zůstatek;12 911,00
+
+"Datum splatnosti";"Datum odepsání z jiné banky";"Protiúčet a kód banky";"Název protiúčtu";"Částka";"Originální částka";"Originální měna";"Kurz";"VS";"KS";"SS";"Identifikace transakce";"Systémový popis";"Popis příkazce";"Popis pro příjemce";"AV pole 1";"AV pole 2";"AV pole 3";"AV pole 4"
+"02.09.2026";"";"";"";"-389,00";"-389,00";"CZK";"";"";"";"";"KB001";"Platba kartou";"BILLA SPOL. S R.O., PRAHA";"";"BILLA 612";"";"";""
+"08.09.2026";"";"19-2000145399/0800";"PRAZSKA PLYNARENSKA";"-1 200,00";"";"";"";"4455";"";"";"KB002";"Inkaso";"zaloha plyn";"";"";"";"";""
+"15.09.2026";"";"";"";"-500,00";"";"";"";"";"";"";"KB003";"Platba kartou";"TESCO STORES CR";"";"";"";"";""
+''', kodovani='cp1250')
+
+# ČSOB – úvod, středníky, obchodník v poznámce
+zapis('csob.csv', '''Číslo účtu;123456789/0300
+Měna;CZK
+Období;01.09.2026 - 22.09.2026
+
+Číslo účtu;Datum zaúčtování;Částka;Měna;Zůstatek;Číslo účtu protiúčtu;Kód banky protiúčtu;Název účtu protiúčtu;Konstantní symbol;Variabilní symbol;Specifický symbol;Označení operace;ID transakce;Poznámka
+123456789;03.09.2026;-156,00;CZK;9844,00;;;;;;;Transakce platební kartou;T1;Místo: PENNY MARKET, PRAHA
+123456789;05.09.2026;-89,00;CZK;9755,00;;;;;;;Transakce platební kartou;T2;Místo: SPOTIFY P1234
+123456789;10.09.2026;28000,00;CZK;37755,00;987654321;0100;ZAMESTNAVATEL A.S.;;202609;;Příchozí platba;T3;MZDA ZARI
+''', kodovani='cp1250')
+
+# Raiffeisenbank – vlastní „Název účtu“ se nesmí brát jako obchodník
+zapis('raiffeisen.csv', '''"Datum provedení";"Datum zaúčtování";"Číslo účtu";"Název účtu";"Kategorie transakce";"Číslo protiúčtu";"Název protiúčtu";"Typ transakce";"Zpráva";"Poznámka";"VS";"KS";"SS";"Zaúčtovaná částka";"Měna účtu";"Původní částka a měna";"Původní částka a měna";"Poplatek";"Id transakce";"Vlastní poznámka";"Název obchodníka";"Město"
+"04.09.2026";"05.09.2026";"1234567890";"Můj běžný účet";"Nákupy";"";"";"Platba kartou";"";"";"";"";"";"-642,50";"CZK";"-642,50";"CZK";"0";"R1";"";"GLOBUS CR";"Brno"
+"07.09.2026";"07.09.2026";"1234567890";"Můj běžný účet";"Bydlení";"2233445566/0300";"SVJ Kvetna 12";"Trvalý příkaz";"fond oprav";"";"";"";"";"-2 400,00";"CZK";"";"";"0";"R2";"";"";""
+"19.09.2026";"20.09.2026";"1234567890";"Můj běžný účet";"Zábava";"";"";"Platba kartou";"";"";"";"";"";"-450,00";"CZK";"";"";"0";"R3";"";"CINEMA CITY";"Praha"
+''')
+
+# mBank – sloupce s mřížkou (#), úvod i patička
+zapis('mbank.csv', '''mBank S.A., organizační složka
+#Pro období:;01.09.2026;22.09.2026;
+
+#Datum uskutečnění transakce;#Datum zaúčtování transakce;#Popis transakce;#Zpráva pro příjemce;#Plátce/Příjemce;#Číslo účtu plátce/příjemce;#KS;#VS;#SS;#Částka transakce;#Účetní zůstatek po transakci;
+06.09.2026;07.09.2026;PLATBA KARTOU;;ROSSMANN 045 BRNO;;;;;-231,90;5 768,10;
+11.09.2026;11.09.2026;PŘÍCHOZÍ PLATBA;vratka zaloha;PETR NOVAK;1234567890/0800;;;;750,00;6 518,10;
+16.09.2026;17.09.2026;PLATBA KARTOU;;MCDONALDS 123;;;;;-179,00;6 339,10;
+
+#Konečný zůstatek:;6 339,10 CZK;
+''', kodovani='cp1250')
+
+# Moneta
+zapis('moneta.csv', '''Číslo účtu;Datum zaúčtování;Datum provedení;Částka;Měna;Číslo protiúčtu;Název protiúčtu;Popis transakce;Zpráva pro příjemce;Variabilní symbol;Obchodník
+123456789;02.09.2026;01.09.2026;-99,00;CZK;;;Platba kartou;;;NETFLIX.COM
+123456789;09.09.2026;09.09.2026;-640,00;CZK;;;Platba kartou;;;BENZINA CS 214
+123456789;12.09.2026;12.09.2026;-1 250,00;CZK;2000123456/2010;Jan Kovar;Odchozí platba;za listky na koncert;;
+''')
+
+# UniCredit – „Název účtu“ je tu protistrana
+zapis('unicredit.csv', '''Účet;Částka;Měna;Datum zaúčtování;Valuta;Banka;Název banky;Číslo účtu;Název účtu;Detaily transakce;Konstantní symbol;Variabilní symbol;Specifický symbol
+1234567890;-2 150,00;CZK;03.09.2026;03.09.2026;0800;Česká spořitelna;1234567/0800;Pojišťovna Uniqa;pojistne auto;;9988;
+1234567890;-310,00;CZK;13.09.2026;13.09.2026;;;;;PLATBA KARTOU DR.MAX LEKARNA;;;
+''')
+
+# Partners / Creditas – příjem a výdaj ve dvou sloupcích
+zapis('partners.csv', '''Datum;Protistrana;Popis;Příjem;Výdaj;Zůstatek
+01.09.2026;KAUFLAND;Platba kartou;;812,40;4 187,60
+05.09.2026;Babička;dárek k narozeninám;2 000,00;;6 187,60
+14.09.2026;O2 CZECH REPUBLIC;Inkaso;;599,00;5 588,60
+''')
+
+# N26 – anglicky, čárky, částka v EUR
+zapis('n26.csv', '''"Date","Payee","Account number","Transaction type","Payment reference","Amount (EUR)","Amount (Foreign Currency)","Type Foreign Currency","Exchange Rate"
+"2026-09-02","SPAR","","MasterCard Payment","","-23.45","","",""
+"2026-09-04","Ryanair","","MasterCard Payment","","-89.99","","",""
+"2026-09-10","Max Muster","DE89370400440532013000","Income","rent share","150.00","","",""
+''')
+
+# Wise – datum dd-mm-yyyy
+zapis('wise.csv', '''"TransferWise ID","Date","Amount","Currency","Description","Payment Reference","Running Balance","Exchange From","Exchange To","Exchange Rate","Payer Name","Payee Name","Payee Account Number","Merchant","Card Last Four Digits","Card Holder Full Name","Attachment","Note","Total fees"
+"CARD-1","07-09-2026","-12.50","EUR","Card transaction of 12.50 EUR issued by Starbucks","","87.50","","","","","","","Starbucks","1234","Jan Novak","","","0.00"
+"TRANSFER-2","12-09-2026","100.00","EUR","Received money from Jan Novak","","187.50","","","","Jan Novak","","","","","","","","0.00"
+''')
+
+
+# Excel (.xlsx) – ručně složený sešit: sdílené texty, styl data, čísla
+def xlsx(nazev, radky):
+    import zipfile
+    texty, index = [], {}
+
+    def s(t):
+        if t not in index:
+            index[t] = len(texty); texty.append(t)
+        return index[t]
+
+    def ref(c, r):
+        return chr(65 + c) + str(r)
+
+    xml_radky = []
+    for r, radek in enumerate(radky, 1):
+        bunky = []
+        for c, h in enumerate(radek):
+            if isinstance(h, tuple):          # ('datum', seriove_cislo)
+                bunky.append('<c r="%s" s="1"><v>%d</v></c>' % (ref(c, r), h[1]))
+            elif isinstance(h, (int, float)):
+                bunky.append('<c r="%s"><v>%s</v></c>' % (ref(c, r), h))
+            elif h == '':
+                continue
+            else:
+                bunky.append('<c r="%s" t="s"><v>%d</v></c>' % (ref(c, r), s(h)))
+        xml_radky.append('<row r="%d">%s</row>' % (r, ''.join(bunky)))
+    from xml.sax.saxutils import escape
+    soubory = {
+        '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+        '_rels/.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+        'xl/workbook.xml': '<?xml version="1.0" encoding="UTF-8"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Pohyby" sheetId="1" r:id="rId1"/></sheets></workbook>',
+        'xl/_rels/workbook.xml.rels': '<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+        'xl/styles.xml': '<?xml version="1.0" encoding="UTF-8"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14" applyNumberFormat="1"/></cellXfs></styleSheet>',
+        'xl/worksheets/sheet1.xml': '<?xml version="1.0" encoding="UTF-8"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>%s</sheetData></worksheet>' % ''.join(xml_radky),
+    }
+    soubory['xl/sharedStrings.xml'] = ('<?xml version="1.0" encoding="UTF-8"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="%d">%s</sst>'
+                                       % (len(texty), ''.join('<si><t>%s</t></si>' % escape(t) for t in texty)))
+    with zipfile.ZipFile(os.path.join(TU, nazev), 'w', zipfile.ZIP_DEFLATED) as z:
+        for k, v in soubory.items():
+            z.writestr(k, v)
+
+
+# 46268 = 1. 9. 2026 v Excelu
+xlsx('george.xlsx', [
+    ['Výpis z účtu', '', '', ''],
+    ['Datum zaúčtování', 'Název protistrany', 'Částka', 'Měna', 'Zpráva pro příjemce'],
+    [('datum', 46268 + 2), 'ALBERT HYPERMARKET', -734.2, 'CZK', ''],
+    [('datum', 46268 + 9), 'Zubní ordinace MUDr. Malá', -1500, 'CZK', 'plomba'],
+    [('datum', 46268 + 14), 'ZAMESTNAVATEL A.S.', 31500, 'CZK', 'mzda'],
+])
+
+print('hotovo i dalsi banky')

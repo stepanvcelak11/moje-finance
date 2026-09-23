@@ -1,0 +1,4 @@
+Číslo účtu;Datum zaúčtování;Datum provedení;Částka;Měna;Číslo protiúčtu;Název protiúčtu;Popis transakce;Zpráva pro příjemce;Variabilní symbol;Obchodník
+123456789;02.09.2026;01.09.2026;-99,00;CZK;;;Platba kartou;;;NETFLIX.COM
+123456789;09.09.2026;09.09.2026;-640,00;CZK;;;Platba kartou;;;BENZINA CS 214
+123456789;12.09.2026;12.09.2026;-1 250,00;CZK;2000123456/2010;Jan Kovar;Odchozí platba;za listky na koncert;;

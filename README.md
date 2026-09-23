@@ -11,8 +11,13 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 
 **Výpis z banky (verze 2.0) – aby se nemuselo zapisovat všechno ručně**
 - v internetovém bankovnictví stáhnete pohyby jako **CSV** (nebo GPC/ABO) a appka je načte
-- sloupce pozná sama podle hlavičky (vyzkoušeno na napodobeninách exportu Fio, Air Bank,
-  Revolut, George/ČS a GPC – viz `ukazky-vypisu/`); kdyby nesedly, dají se přehodit ručně
+- bere **CSV, Excel (.xlsx) a GPC**; sloupce pozná sama podle hlavičky. Vyzkoušeno na napodobeninách
+  exportů Fio, Česká spořitelna (CSV i Excel), KB, ČSOB, Raiffeisen, Air Bank, mBank, Moneta, UniCredit,
+  Partners/Creditas, Revolut, N26 a Wise – viz `ukazky-vypisu/`. Na skutečných souborech z bank
+  zatím ověřeno není; kdyby sloupce nesedly, dají se přehodit ručně
+- u výběru banky appka ukáže, kde v bankovnictví export obvykle je
+- **bezpečnost**: soubor se čte jen v telefonu (JavaScript v prohlížeči), nikam se neodesílá –
+  appka nemá žádný server. Stažený soubor z Downloads/Souborů pak klidně smažte
 - **kategorie doplní sama**: vestavěný slovník obchodů (Lidl, Albert, Shell, Wolt, Netflix,
   ČEZ, dm…) + to, co jste jednou opravili – appka si to pamatuje na příští výpis
 - výběr z bankomatu zapíše jako převod do Hotovosti
@@ -37,6 +42,10 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 - **odznak trendu** u největších kategorií: o kolik se liší od průměru předchozích měsíců za stejně dlouhý úsek
 - rozpočty s ukazatelem čerpání
 - poslední pohyby s barevnou ikonou podle kategorie
+- srovnání s minulým měsícem ke stejnému dni („↓ 12 % méně než touhle dobou v srpnu“)
+- **Kde nejvíc utrácíte** – obchody za měsíc (klepnutím do historie)
+- **Pravidelně odchází** – předplatné, nájem a inkasa poznané z historie (stejný obchod každý měsíc
+  s podobnou částkou) + kolik to dělá měsíčně a kdy přijde další platba
 
 **Zápis**
 - **napíšete částku a klepnete na kategorii – tím je zapsáno** (hláška nabídne *Zpět*)
@@ -162,7 +171,7 @@ Soubory:
 | `sw.js` | offline vrstva |
 | `ikony/` | ikony aplikace |
 | `test-proklikani.py` | automatický proklik aplikace v prohlížeči (Playwright) |
-| `test-import.py` | proklik načtení výpisu z banky (39 kontrol) |
+| `test-import.py` | proklik načtení výpisu z banky (85 kontrol, 16 formátů) |
 | `ukazky-vypisu/` | napodobeniny výpisů z bank pro test (`vyrob.py` je vyrobí znovu) |
 
 ⚠ **Po každé úpravě zvedněte `VERZE` v `sw.js`** (`moje-finance-v1` → `v2` → …),

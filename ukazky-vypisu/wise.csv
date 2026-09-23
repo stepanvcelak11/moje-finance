@@ -1,0 +1,3 @@
+"TransferWise ID","Date","Amount","Currency","Description","Payment Reference","Running Balance","Exchange From","Exchange To","Exchange Rate","Payer Name","Payee Name","Payee Account Number","Merchant","Card Last Four Digits","Card Holder Full Name","Attachment","Note","Total fees"
+"CARD-1","07-09-2026","-12.50","EUR","Card transaction of 12.50 EUR issued by Starbucks","","87.50","","","","","","","Starbucks","1234","Jan Novak","","","0.00"
+"TRANSFER-2","12-09-2026","100.00","EUR","Received money from Jan Novak","","187.50","","","","Jan Novak","","","","","","","","0.00"

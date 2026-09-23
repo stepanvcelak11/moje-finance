@@ -95,6 +95,7 @@
     if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))) { r = +m[1]; mes = +m[2]; d = +m[3]; }
     else if ((m = /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/.exec(s))) { d = +m[1]; mes = +m[2]; r = +m[3]; }
     else if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s))) { d = +m[1]; mes = +m[2]; r = +m[3]; }
+    else if ((m = /^(\d{1,2})-(\d{1,2})-(\d{4})/.exec(s))) { d = +m[1]; mes = +m[2]; r = +m[3]; }
     else if ((m = /^(\d{1,2})\.(\d{1,2})\.(\d{2})(?!\d)/.exec(s))) { d = +m[1]; mes = +m[2]; r = 2000 + +m[3]; }
     else if ((m = /^(\d{4})(\d{2})(\d{2})$/.exec(s))) { r = +m[1]; mes = +m[2]; d = +m[3]; }
     else return null;
@@ -111,29 +112,37 @@
   // Pořadí vzorů = priorita. Vyhrává první vzor, který sedí na nějaký sloupec.
   var ROLE = {
     datum: [/datum proveden/, /datum uskutecn/, /datum transakce/, /started date/, /^datum$/, /^date$/,
-      /datum zauctovan/, /completed date/, /datum splatnosti/, /datum/, /date/],
+      /datum zauctovan/, /completed date/, /datum splatnosti/, /booking date/, /datum/, /date/],
     castka: [/castka v mene uctu/, /zauctovana castka/, /castka transakce/, /^objem$/, /^castka$/,
-      /^amount$/, /^suma$/, /castka/, /objem/, /amount/],
-    prijem: [/^(kredit|credit|pripsano|prijem|prichozi castka)$/],
-    vydaj: [/^(debet|debit|odepsano|vydaj|odchozi castka)$/],
-    smer: [/smer uhrady/, /smer platby/, /^smer$/, /direction/, /debet\s*\/\s*kredit/],
+      /^amount$/, /^suma$/, /castka/, /objem/, /amount/, /^suma/],
+    prijem: [/^(kredit|credit|pripsano|prijem|prichozi castka|money in|paid in)$/],
+    vydaj: [/^(debet|debit|odepsano|vydaj|odchozi castka|money out|paid out)$/],
+    smer: [/smer uhrady/, /smer platby/, /^smer$/, /direction/, /debet\s*\/\s*kredit/, /^d\s*\/\s*c$/],
     stav: [/^state$/, /^stav$/, /^status$/, /stav transakce/],
-    nazev: [/nazev protistrany/, /nazev protiuctu/, /^protistrana$/, /obchodni misto/, /obchodnik/,
-      /merchant/, /platce\s*\/\s*prijemce/, /nazev obchodu/, /^description$/, /popis transakce/,
-      /^popis$/, /nazev/],
-    zprava: [/zprava pro prijemce/, /zprava pro mne/, /^zprava$/, /poznamka k uhrade/, /^poznamka$/,
-      /popis pro prijemce/, /popis prikazce/, /message/, /reference/, /^note$/, /informace k platbe/, /upresneni/, /komentar/, /poznamka/],
     typ: [/typ uhrady/, /typ transakce/, /typ operace/, /oznaceni operace/, /^typ$/, /^type$/,
-      /kategorie transakce/, /systemovy popis/],
+      /transaction type/, /kategorie transakce/, /systemovy popis/],
     mena: [/^mena$/, /^currency$/, /mena uctu/]
   };
 
-  var NEBRAT_CASTKU = /zustatek|balance|poplatek|fee|original|puvodni|kurz|rate|cislo/;
+  // Kdo / co: víc sloupců, bere se první neprázdný. Obchodník má přednost,
+  // protože u plateb kartou bývá název protiúčtu prázdný.
+  var NAZEV = [/obchodni misto/, /nazev obchodnika/, /^obchodnik/, /merchant/, /nazev obchodu/,
+    /nazev protistrany/, /nazev protiuctu/, /nazev uctu protistrany/, /nazev uctu protiuctu/,
+    /^protistrana$/, /^payee$/, /counterparty/, /^recipient/, /^beneficiary/,
+    /platce\s*\/\s*prijemce/, /^prijemce$/, /^platce$/, /^description$/, /popis transakce/,
+    /^popis$/, /^nazev$/, /^name$/];
+  var ZPRAVA = [/zprava pro prijemce/, /zprava pro mne/, /^zprava$/, /poznamka k uhrade/, /^poznamka$/,
+    /popis pro prijemce/, /popis prikazce/, /detail/, /payment reference/, /message/, /reference/,
+    /^note$/, /informace k platbe/, /upresneni/, /komentar/, /poznamka/, /av pole 1/];
+  // v těchhle sloupcích název nehledat – čísla účtů, banky, vlastní účet
+  var NENI_NAZEV = /cislo|kod|iban|bic|swift|banky|banka|symbol|^ucet$|mena|castka|datum|date|amount/;
+
+  var NEBRAT_CASTKU = /zustatek|balance|poplatek|fee|original|puvodni|kurz|rate|cislo|foreign|cizi/;
 
   function priradRole(hlavicka) {
     var h = hlavicka.map(bezDiakritiky).map(function (x) { return x.replace(/^#/, '').trim(); });
     var obsazeno = {}, role = {};
-    ['datum', 'castka', 'prijem', 'vydaj', 'smer', 'stav', 'nazev', 'zprava', 'typ', 'mena']
+    ['datum', 'castka', 'prijem', 'vydaj', 'smer', 'stav', 'typ', 'mena']
       .forEach(function (r) {
         var vzory = ROLE[r];
         for (var v = 0; v < vzory.length; v++) {
@@ -144,6 +153,32 @@
           }
         }
       });
+    function seznam(vzory, zakaz) {
+      var vysledek = [];
+      vzory.forEach(function (vz) {
+        for (var i = 0; i < h.length; i++) {
+          if (obsazeno[i] || vysledek.indexOf(i) >= 0 || !vz.test(h[i])) continue;
+          if (zakaz && zakaz.test(h[i])) continue;
+          vysledek.push(i);
+        }
+      });
+      vysledek.forEach(function (i) { obsazeno[i] = true; });
+      return vysledek;
+    }
+    role.nazvy = seznam(NAZEV, NENI_NAZEV);
+    role.zpravy = seznam(ZPRAVA, /cislo|symbol/);
+    // „Název účtu“ je u některých bank protistrana, u jiných vlastní účet → jen jako poslední záchrana
+    if (!role.nazvy.length) {
+      for (var i = 0; i < h.length; i++) if (!obsazeno[i] && /^nazev uctu$/.test(h[i])) role.nazvy.push(i);
+    }
+    // obecný „Popis“ vedle protistrany je spíš zpráva („dárek k narozeninám“)
+    var popisy = role.nazvy.filter(function (i) { return /^popis$/.test(h[i]); });
+    if (popisy.length && popisy.length < role.nazvy.length) {
+      role.nazvy = role.nazvy.filter(function (i) { return popisy.indexOf(i) < 0; });
+      role.zpravy = role.zpravy.concat(popisy);
+    }
+    role.nazev = role.nazvy[0];
+    role.zprava = role.zpravy[0];
     return role;
   }
 
@@ -163,16 +198,26 @@
       else if (role.castka === undefined && cis > n * 0.7) role.castka = i;
       else if (delka / Math.max(1, n) > nejDelka) { nejDelka = delka / Math.max(1, n); role.nazev = i; }
     }
+    role.nazvy = role.nazev !== undefined ? [role.nazev] : [];
+    role.zpravy = [];
     return role;
+  }
+
+  function prvniNeprazdny(r, sloupce) {
+    for (var i = 0; i < sloupce.length; i++) {
+      var x = (r[sloupce[i]] || '').trim();
+      if (x) return x;
+    }
+    return '';
   }
 
   /* ---------- rozbor souboru ---------- */
 
   /**
    * Rozebere text výpisu. Vrací { pohyby, sloupce, hlavicka, format, chyba }.
-   * `vynucene` = ruční přiřazení sloupců { datum, castka, nazev } (indexy).
+   * `vynucene` = ruční přiřazení sloupců { datum, castka, nazev, zprava } (indexy).
    */
-  function rozeber(text, vynucene) {
+  function rozeber(text, vynucene, format) {
     if (/^0(74|75)/m.test(text.slice(0, 400)) && /^075/m.test(text)) return rozeberGpc(text);
 
     var odd = najdiOddelovac(text);
@@ -183,7 +228,7 @@
     var iHlavicky = -1;
     for (var i = 0; i < Math.min(radky.length, 40); i++) {
       var r = radky[i].map(bezDiakritiky).join('|');
-      if (/datum|date/.test(r) && /castka|objem|amount|suma|kredit|debet|credit|debit/.test(r)) { iHlavicky = i; break; }
+      if (/datum|date/.test(r) && /castka|objem|amount|suma|kredit|debet|credit|debit|money|prijem|vydaj/.test(r)) { iHlavicky = i; break; }
     }
     var hlavicka = iHlavicky >= 0 ? radky[iHlavicky] : [];
     var data = radky.slice(iHlavicky + 1);
@@ -193,7 +238,13 @@
         if (vynucene[k] !== undefined && vynucene[k] !== null && vynucene[k] !== '') {
           role[k] = Number(vynucene[k]);
           if (k === 'castka') { delete role.prijem; delete role.vydaj; }
-        } else if (vynucene[k] === '') delete role[k];
+          if (k === 'nazev') role.nazvy = [role.nazev];
+          if (k === 'zprava') role.zpravy = [role.zprava];
+        } else if (vynucene[k] === '') {
+          delete role[k];
+          if (k === 'nazev') role.nazvy = [];
+          if (k === 'zprava') role.zpravy = [];
+        }
       });
     }
     if (!hlavicka.length) {
@@ -214,21 +265,21 @@
       if (c === undefined || isNaN(c) || c === 0) return;
       if (role.smer !== undefined && c > 0) {
         var sm = bezDiakritiky(r[role.smer]);
-        if (/odchozi|debet|debit|vydaj|out/.test(sm)) c = -c;
+        if (/odchozi|debet|debit|vydaj|out|^d$/.test(sm)) c = -c;
       }
       if (role.stav !== undefined) {
         var st = bezDiakritiky(r[role.stav]);
         if (/revert|declin|fail|zamitnut|zrusen|cancel/.test(st)) return;
       }
-      var nazev = role.nazev !== undefined ? r[role.nazev] || '' : '';
-      var zprava = role.zprava !== undefined ? r[role.zprava] || '' : '';
+      var nazev = prvniNeprazdny(r, role.nazvy || []);
+      var zprava = prvniNeprazdny(r, role.zpravy || []);
       var typ = role.typ !== undefined ? r[role.typ] || '' : '';
       pohyby.push(pohyb(d, c, nazev, zprava, typ));
     });
 
     return {
       pohyby: pohyby,
-      format: 'CSV',
+      format: format || 'CSV',
       hlavicka: hlavicka,
       sloupce: { datum: role.datum, castka: role.castka !== undefined ? role.castka : role.vydaj,
         nazev: role.nazev, zprava: role.zprava },
@@ -239,9 +290,12 @@
 
   function pohyb(d, c, nazev, zprava, typ) {
     // „Nákup: LIDL…“ – předpona banky nic neříká
-    var PREDPONA = /^(nákup|nakup|platba kartou|platba|card payment|purchase)\s*:\s*/i;
+    var PREDPONA = /^(nákup|nakup|platba kartou|platba|místo|misto|card payment|purchase)\s*:\s*/i;
     nazev = String(nazev || '').replace(/\s+/g, ' ').trim().replace(PREDPONA, '');
     zprava = String(zprava || '').replace(/\s+/g, ' ').trim().replace(PREDPONA, '');
+    // obecné „Platba kartou“, „Inkaso“ ve zprávě nic nového neřekne
+    if (nazev && /^(platba kartou|inkaso|trvaly prikaz|odchozi platba|prichozi platba|platba|card payment|transakce platebni kartou)$/
+        .test(bezDiakritiky(zprava))) zprava = '';
     var popis = nazev || zprava || String(typ || '').trim() || (c < 0 ? 'Platba' : 'Příchozí platba');
     if (nazev && zprava && bezDiakritiky(zprava).indexOf(bezDiakritiky(nazev)) < 0 &&
         bezDiakritiky(nazev).indexOf(bezDiakritiky(zprava)) < 0) {
@@ -294,6 +348,149 @@
     return datum(s.slice(0, 2) + '.' + s.slice(2, 4) + '.20' + s.slice(4, 6));
   }
 
+  /* ---------- Excel (.xlsx) ----------
+     Xlsx je ZIP s XML uvnitř. Rozbalí se vestavěným DecompressionStream
+     (Safari 16.4+, Chrome 80+), první list se převede na text jako CSV
+     a dál jde stejnou cestou. Starý .xls (před rokem 2007) neumí. */
+
+  function jeZip(buf) {
+    var b = new Uint8Array(buf, 0, Math.min(4, buf.byteLength));
+    return b.length === 4 && b[0] === 0x50 && b[1] === 0x4b && b[2] === 3 && b[3] === 4;
+  }
+
+  function jeStaryExcel(buf) {
+    var b = new Uint8Array(buf, 0, Math.min(8, buf.byteLength));
+    return b.length === 8 && b[0] === 0xd0 && b[1] === 0xcf && b[2] === 0x11 && b[3] === 0xe0;
+  }
+
+  /** Obsah ZIPu: { cesta: Promise<Uint8Array> } podle centrálního adresáře. */
+  function rozbalZip(buf) {
+    var dv = new DataView(buf);
+    var konec = -1;
+    for (var i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 70000); i--) {
+      if (dv.getUint32(i, true) === 0x06054b50) { konec = i; break; }
+    }
+    if (konec < 0) throw new Error('Poškozený soubor.');
+    var pocet = dv.getUint16(konec + 10, true);
+    var pos = dv.getUint32(konec + 16, true);
+    var dek = new TextDecoder('utf-8');
+    var soubory = {};
+    for (var n = 0; n < pocet; n++) {
+      if (dv.getUint32(pos, true) !== 0x02014b50) break;
+      var metoda = dv.getUint16(pos + 10, true);
+      var velikost = dv.getUint32(pos + 20, true);
+      var delkaJmena = dv.getUint16(pos + 28, true);
+      var delkaExtra = dv.getUint16(pos + 30, true);
+      var delkaKom = dv.getUint16(pos + 32, true);
+      var lokalni = dv.getUint32(pos + 42, true);
+      var jmeno = dek.decode(new Uint8Array(buf, pos + 46, delkaJmena));
+      var zacatek = lokalni + 30 + dv.getUint16(lokalni + 26, true) + dv.getUint16(lokalni + 28, true);
+      soubory[jmeno] = { metoda: metoda, data: new Uint8Array(buf, zacatek, velikost) };
+      pos += 46 + delkaJmena + delkaExtra + delkaKom;
+    }
+    return soubory;
+  }
+
+  function nafoukni(z) {
+    if (z.metoda === 0) return Promise.resolve(z.data);
+    if (typeof DecompressionStream === 'undefined') {
+      return Promise.reject(new Error('Tenhle prohlížeč Excel neotevře, uložte výpis jako CSV.'));
+    }
+    var proud = new Blob([z.data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return new Response(proud).arrayBuffer().then(function (b) { return new Uint8Array(b); });
+  }
+
+  function xml(bajty) {
+    return new DOMParser().parseFromString(new TextDecoder('utf-8').decode(bajty), 'application/xml');
+  }
+
+  function prvky(doc, jmeno) { return Array.prototype.slice.call(doc.getElementsByTagNameNS('*', jmeno)); }
+
+  function textPrvku(el) {
+    return prvky(el, 't').map(function (t) { return t.textContent; }).join('');
+  }
+
+  /** Které styly buněk jsou datum (podle číselného formátu). */
+  function stylyData(doc) {
+    var vlastni = {};
+    prvky(doc, 'numFmt').forEach(function (f) {
+      var kod = (f.getAttribute('formatCode') || '').replace(/"[^"]*"|\[[^\]]*\]/g, '').toLowerCase();
+      vlastni[f.getAttribute('numFmtId')] = /[dy]/.test(kod) || /m.*[dy]|[dy].*m/.test(kod);
+    });
+    var xfs = prvky(doc, 'cellXfs')[0];
+    if (!xfs) return [];
+    return prvky(xfs, 'xf').map(function (x) {
+      var id = +x.getAttribute('numFmtId');
+      return (id >= 14 && id <= 22) || (id >= 45 && id <= 47) || !!vlastni[id];
+    });
+  }
+
+  function excelNaDatum(cislo) {
+    var d = new Date(Math.round((cislo - 25569) * 86400000));
+    return dvoj(d.getUTCDate()) + '.' + dvoj(d.getUTCMonth() + 1) + '.' + d.getUTCFullYear();
+  }
+
+  function sloupecZOdkazu(ref) {
+    var m = /^([A-Z]+)/.exec(ref || ''), n = 0;
+    if (!m) return -1;
+    for (var i = 0; i < m[1].length; i++) n = n * 26 + (m[1].charCodeAt(i) - 64);
+    return n - 1;
+  }
+
+  function bunkaCsv(h) {
+    h = String(h == null ? '' : h);
+    return /[";\n\r]/.test(h) ? '"' + h.replace(/"/g, '""') + '"' : h;
+  }
+
+  /** Xlsx → text ve tvaru CSV se středníky (první list sešitu). */
+  function zExcelu(buf) {
+    var soubory;
+    try { soubory = rozbalZip(buf); } catch (e) { return Promise.reject(e); }
+    var listy = Object.keys(soubory).filter(function (k) { return /^xl\/worksheets\/sheet\d+\.xml$/.test(k); })
+      .sort(function (a, b) { return +a.replace(/\D/g, '') - +b.replace(/\D/g, ''); });
+    if (!listy.length) return Promise.reject(new Error('V souboru není žádný list.'));
+    var cesty = [listy[0], 'xl/sharedStrings.xml', 'xl/styles.xml'];
+    return Promise.all(cesty.map(function (c) {
+      return soubory[c] ? nafoukni(soubory[c]) : Promise.resolve(null);
+    })).then(function (obsah) {
+      var list = xml(obsah[0]);
+      var texty = obsah[1] ? prvky(xml(obsah[1]), 'si').map(textPrvku) : [];
+      var jeDatum = obsah[2] ? stylyData(xml(obsah[2])) : [];
+      var radky = prvky(list, 'row').map(function (row) {
+        var bunky = [];
+        prvky(row, 'c').forEach(function (c, poradi) {
+          var sl = sloupecZOdkazu(c.getAttribute('r'));
+          if (sl < 0) sl = poradi;
+          var typ = c.getAttribute('t');
+          var v = prvky(c, 'v')[0];
+          var hodnota = v ? v.textContent : '';
+          if (typ === 's') hodnota = texty[+hodnota] || '';
+          else if (typ === 'inlineStr') hodnota = textPrvku(c);
+          else if (typ !== 'str' && typ !== 'b' && hodnota !== '' && jeDatum[+(c.getAttribute('s') || 0)]) {
+            hodnota = excelNaDatum(+hodnota);
+          }
+          bunky[sl] = hodnota;
+        });
+        for (var i = 0; i < bunky.length; i++) if (bunky[i] === undefined) bunky[i] = '';
+        return bunky.map(bunkaCsv).join(';');
+      });
+      return radky.join('\n');
+    });
+  }
+
+  /**
+   * Libovolný soubor výpisu → Promise<{ text, format }>.
+   * Pozná xlsx, starý xls (odmítne s radou) a jinak bere text (CSV, GPC).
+   */
+  function prectiSoubor(buf) {
+    if (jeZip(buf)) return zExcelu(buf).then(function (t) { return { text: t, format: 'Excel' }; });
+    if (jeStaryExcel(buf)) {
+      return Promise.reject(new Error('Tohle je starý formát Excelu (.xls). V bankovnictví zvolte export ' +
+        'do CSV, nebo soubor v Excelu/Numbers uložte jako .xlsx či CSV.'));
+    }
+    return Promise.resolve({ text: dekoduj(buf), format: null });
+  }
+
   /* ---------- klíč obchodníka ---------- */
 
   var SUM = ('platba kartou platba karta nakup dekujeme dekuje za cz sk com www s r o sro a s as spol ' +
@@ -315,7 +512,7 @@
   /* ---------- vestavěný slovník ---------- */
 
   var SLOVNIK = [
-    ['k-potraviny', 'lidl albert billa kaufland tesco penny globus coop zabka norma rohlik kosik ' +
+    ['k-potraviny', 'lidl albert billa kaufland tesco penny globus coop zabka norma rohlik kosik spar ' +
       'makro hruska potraviny pekarna reznictvi jip tamda flop delmart kolonial ovoce zelenina'],
     ['k-restaurace', 'mcdonald kfc burger king subway starbucks costa wolt foodora bolt food ' +
       'damejidlo restaurace restaurant bistro kavarna cafe coffee pizzeria pizza bageterie ' +
@@ -332,7 +529,8 @@
       'c a lindex new yorker bershka pull bear'],
     ['k-sport', 'decathlon sportisimo intersport a3 sport hervis gym fitness posilovna bazen'],
     ['k-zdravi', 'lekarna benu dr max drmax pilulka zdravotni poliklinika nemocnice lekar ' +
-      'zubar optika'],
+      'zubar zubni ordinace mudr optika'],
+    ['k-bydleni', 'svj najem najemne pronajem fond oprav druzstvo sbd bytove'],
     ['k-telefon', 'o2 t mobile tmobile vodafone upc nordic telecom starnet internet'],
     ['k-energie', 'cez pre innogy e on eon plynarenska ppas bohemia energy teplarna vodarny ' +
       'pvk centropol'],
@@ -400,7 +598,8 @@
         var z = celyText;
         var pk = /mzda|vyplata|\bplat\b|salary|wage/.test(z) ? 'p-vyplata'
           : (/urok|interest/.test(z) ? 'p-uroky'
-          : (/vratka|refund|vraceni|storno|dobropis/.test(z) ? 'p-vratka' : 'p-jine'));
+          : (/vratka|refund|vraceni|storno|dobropis/.test(z) ? 'p-vratka'
+          : (/(^|[^a-z])dar([^a-z]|$)|darek|narozenin|vanoc/.test(z) ? 'p-dar' : 'p-jine')));
         if (!jeKat(pk, 'prijem')) pk = 'p-jine';
         p.kat = jeKat(pk, 'prijem') ? pk : null;
         if (pk !== 'p-jine') p.zdrojKat = 'slovnik';
@@ -424,6 +623,7 @@
 
   global.FImport = {
     dekoduj: dekoduj,
+    prectiSoubor: prectiSoubor,
     rozeber: rozeber,
     zatrid: zatrid,
     otisky: otisky,

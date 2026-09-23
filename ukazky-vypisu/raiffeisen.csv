@@ -1,0 +1,4 @@
+"Datum provedení";"Datum zaúčtování";"Číslo účtu";"Název účtu";"Kategorie transakce";"Číslo protiúčtu";"Název protiúčtu";"Typ transakce";"Zpráva";"Poznámka";"VS";"KS";"SS";"Zaúčtovaná částka";"Měna účtu";"Původní částka a měna";"Původní částka a měna";"Poplatek";"Id transakce";"Vlastní poznámka";"Název obchodníka";"Město"
+"04.09.2026";"05.09.2026";"1234567890";"Můj běžný účet";"Nákupy";"";"";"Platba kartou";"";"";"";"";"";"-642,50";"CZK";"-642,50";"CZK";"0";"R1";"";"GLOBUS CR";"Brno"
+"07.09.2026";"07.09.2026";"1234567890";"Můj běžný účet";"Bydlení";"2233445566/0300";"SVJ Kvetna 12";"Trvalý příkaz";"fond oprav";"";"";"";"";"-2 400,00";"CZK";"";"";"0";"R2";"";"";""
+"19.09.2026";"20.09.2026";"1234567890";"Můj běžný účet";"Zábava";"";"";"Platba kartou";"";"";"";"";"";"-450,00";"CZK";"";"";"0";"R3";"";"CINEMA CITY";"Praha"

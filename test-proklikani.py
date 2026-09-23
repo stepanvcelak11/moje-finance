@@ -354,6 +354,7 @@ with sync_playwright() as p:
 
     # ---------- rozpocty, kategorie, ucty ----------
     page.click(".nav-tl[data-jdi='nastaveni']"); page.wait_for_timeout(400)
+    page.click("#sbal-rozpocty summary"); page.wait_for_timeout(150)
     page.fill("[data-rozpocet='k-doprava']", "500")
     page.dispatch_event("[data-rozpocet='k-doprava']", "change"); page.wait_for_timeout(350)
     page.click(".nav-tl[data-jdi='prehled']"); page.wait_for_timeout(400)
@@ -361,6 +362,8 @@ with sync_playwright() as p:
     kontrola("rozpocet prekrocen", "překročeno" in txt("#seznam-rozpoctu"))
 
     page.click(".nav-tl[data-jdi='nastaveni']"); page.wait_for_timeout(350)
+    if not page.is_visible("#tl-nova-kategorie"):
+        page.click("#sbal-kategorie summary"); page.wait_for_timeout(150)
     page.click("#tl-nova-kategorie"); page.wait_for_timeout(300)
     page.fill("#d-nazev", "Kadernik")
     page.click("#dialog-ano"); page.wait_for_timeout(400)

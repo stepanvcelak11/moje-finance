@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <title>Moje finance</title>
 <meta name="description" content="Přehled o penězích – výdaje, příjmy, účty a rozpočty. Vše zůstává v telefonu.">
-<meta name="theme-color" content="#111110">
+<meta name="theme-color" content="#4b5ff0">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="ikony/ikona-192.png">
 <link rel="apple-touch-icon" href="ikony/ikona-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Finance">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="css/styl.css">
 </head>
 <body>
@@ -40,15 +42,16 @@
       </button>
     </div>
 
-    <div class="karta hero" id="karta-hero">
+    <div class="hero" id="karta-hero">
       <div class="hero-hlavni">
-        <div class="prstenec" id="prstenec"></div>
         <div class="hero-text">
           <div class="hero-popis" id="hero-popis">Utraceno tento měsíc</div>
           <div class="hero-cislo" id="hero-utraceno">0 Kč</div>
-          <div class="hero-prijmy" id="hero-prijmy"></div>
+          <div class="hero-srovnani" id="hero-srovnani" hidden></div>
         </div>
+        <div class="prstenec" id="prstenec"></div>
       </div>
+      <div class="hero-prijmy" id="hero-prijmy"></div>
       <div class="hero-zbyva" id="souhrn-rozdil-pod"></div>
       <div class="hero-dnes">
         <button class="hero-dnes-dil" id="hero-dnes">
@@ -85,6 +88,23 @@
       <div id="graf-podil"></div>
       <div id="graf-kategorie" class="kat-seznam"></div>
       <p class="prazdno" id="kategorie-prazdno" hidden>V tomto měsíci zatím nemáte žádný výdaj.</p>
+    </div>
+
+    <div class="karta" id="karta-obchody" hidden>
+      <div class="karta-hlava">
+        <h2>Kde nejvíc utrácíte</h2>
+        <span class="karta-doplnek" id="obchody-doplnek"></span>
+      </div>
+      <div id="seznam-obchodu" class="kat-seznam"></div>
+    </div>
+
+    <div class="karta" id="karta-predplatne" hidden>
+      <div class="karta-hlava">
+        <h2>Pravidelně odchází</h2>
+        <span class="karta-doplnek" id="predplatne-soucet"></span>
+      </div>
+      <div id="seznam-predplatneho"></div>
+      <p class="napoveda" style="margin-top:8px">Poznáno z historie: stejný obchod každý měsíc s podobnou částkou.</p>
     </div>
 
     <div class="karta" id="karta-rozpocty" hidden>
@@ -129,6 +149,7 @@
 
   <!-- ============ ÚČTY ============ -->
   <section class="pohled" id="pohled-ucty" hidden>
+    <h1 class="nadpis-stranky">Účty</h1>
     <div class="karta hero hero-maly">
       <div class="hero-popis">Zůstatek celkem</div>
       <div class="hero-cislo" id="ucty-celkem">0 Kč</div>
@@ -184,6 +205,7 @@
 
   <!-- ============ VÍC ============ -->
   <section class="pohled" id="pohled-nastaveni" hidden>
+    <h1 class="nadpis-stranky">Víc</h1>
 
     <button class="tl tl-siroke tl-radek" style="margin-top:0" data-jdi="grafy">
       <span data-ikona="ui-grafy"></span> Grafy a rozbory
@@ -197,15 +219,16 @@
     </div>
 
 
-    <div class="karta">
-      <div class="karta-hlava"><h2>Rozpočty na měsíc</h2></div>
-      <p class="napoveda napoveda-nahore">Nastavte měsíční strop u kategorií, které chcete hlídat. Prázdné pole = nehlídá se.</p>
+    <details class="karta sbalovaci" id="sbal-rozpocty">
+      <summary><h2>Rozpočty na měsíc</h2><span class="karta-doplnek" id="rozpocty-souhrn"></span></summary>
+      <p class="napoveda napoveda-nahore" style="margin-top:6px">Nastavte měsíční strop u kategorií, které chcete hlídat. Prázdné pole = nehlídá se.</p>
       <div id="editor-rozpoctu"></div>
-    </div>
+    </details>
 
-    <div class="karta">
-      <div class="karta-hlava">
-        <h2>Kategorie</h2>
+    <details class="karta sbalovaci" id="sbal-kategorie">
+      <summary><h2>Kategorie</h2><span class="karta-doplnek" id="kategorie-souhrn"></span></summary>
+      <div class="karta-hlava" style="margin-top:8px">
+        <span class="karta-doplnek">Název, ikona a barva</span>
         <button class="odkaz" id="tl-nova-kategorie">+ Přidat</button>
       </div>
       <div class="chipy chipy-podskupina" id="chipy-kat-typ">
@@ -213,7 +236,7 @@
         <button class="chip" data-kattyp="prijem">Příjmy</button>
       </div>
       <div id="editor-kategorii"></div>
-    </div>
+    </details>
 
     <div class="karta">
       <div class="karta-hlava">

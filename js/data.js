@@ -537,6 +537,119 @@
       .map(function (x) { return x.k; });
   }
 
+  /* ---------- obchody, pravidelné platby, srovnání ---------- */
+
+  /** Klíč obchodu: z výpisu uložený, u ručního zápisu z poznámky. */
+  function klicObchodu(t) {
+    if (t.klic) return t.klic;
+    if (!t.pozn || !global.FImport) return '';
+    return global.FImport.klic({ nazev: t.pozn });
+  }
+
+  /** „LIDL DEKUJE ZA NAKUP, Praha“ → „Lidl Dekuje Za Nakup“ – čitelnější jméno obchodu. */
+  function hezkyNazev(text) {
+    var s = String(text || '').split(' · ')[0].split(',')[0]
+      .replace(/\s+\d[\d\s]*$/, '').replace(/\*\d+/g, '').trim();
+    if (s.length > 3 && s === s.toUpperCase()) {
+      s = s.toLowerCase().replace(/(^|[\s.\-])([a-zá-ž])/g, function (m, a, b) { return a + b.toUpperCase(); });
+    }
+    s = s.slice(0, 32);
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : 'Bez názvu';
+  }
+
+  function seskupPodleObchodu(seznam) {
+    var mapa = {};
+    seznam.forEach(function (t) {
+      if (t.typ !== 'vydaj') return;
+      var k = klicObchodu(t);
+      if (!k) return;
+      if (!mapa[k]) mapa[k] = { klic: k, castka: 0, pocet: 0, nazvy: {}, kat: {}, transakce: [] };
+      var z = mapa[k];
+      z.castka += t.castka; z.pocet++;
+      z.transakce.push(t);
+      var n = hezkyNazev(t.pozn);
+      z.nazvy[n] = (z.nazvy[n] || 0) + 1;
+      z.kat[t.kat] = (z.kat[t.kat] || 0) + 1;
+    });
+    return Object.keys(mapa).map(function (k) {
+      var z = mapa[k];
+      z.nazev = nejcastejsi(z.nazvy);
+      var kat = kategorie(nejcastejsi(z.kat));
+      z.ikona = kat.ikona; z.barva = kat.barva; z.katId = kat.id;
+      return z;
+    });
+  }
+
+  function nejcastejsi(cetnosti) {
+    var nej = null;
+    Object.keys(cetnosti).forEach(function (k) { if (nej === null || cetnosti[k] > cetnosti[nej]) nej = k; });
+    return nej;
+  }
+
+  /** Kde se nejvíc utrácí – obchody za zadané transakce, sestupně. */
+  function podleObchodu(seznam) {
+    return seskupPodleObchodu(seznam).sort(function (a, b) { return b.castka - a.castka; });
+  }
+
+  /**
+   * Pravidelné platby rozpoznané z historie: stejný obchod aspoň ve dvou
+   * měsících po sobě, nanejvýš jednou (dvakrát) za měsíc a s podobnou
+   * částkou. Nákupy v Lidlu tak mezi ně nespadnou, Netflix a nájem ano.
+   */
+  function pravidelnePlatby() {
+    var dnes = new Date();
+    var od = new Date(dnes); od.setDate(od.getDate() - 200);
+    var odISO = naISO(od);
+    var nedavno = new Date(dnes); nedavno.setDate(nedavno.getDate() - 45);
+    var nedavnoISO = naISO(nedavno);
+    var skupiny = seskupPodleObchodu(stav.transakce.filter(function (t) { return t.datum >= odISO; }));
+    var vysledek = [];
+    skupiny.forEach(function (z) {
+      var mesice = {};
+      z.transakce.forEach(function (t) { mesice[t.datum.slice(0, 7)] = (mesice[t.datum.slice(0, 7)] || 0) + 1; });
+      var klice = Object.keys(mesice).sort();
+      if (klice.length < 2) return;
+      if (z.pocet / klice.length > 1.3) return;            // chodí se tam častěji než jednou měsíčně
+      var poSobe = klice.some(function (k, i) { return i > 0 && dalsiMesic(klice[i - 1]) === k; });
+      if (!poSobe) return;
+      var castky = z.transakce.map(function (t) { return t.castka; });
+      var med = median(castky);
+      var podobne = castky.filter(function (c) { return Math.abs(c - med) <= med * 0.2; }).length;
+      if (podobne < castky.length * 0.75) return;
+      var posledni = z.transakce.reduce(function (a, t) { return t.datum > a.datum ? t : a; });
+      if (posledni.datum < nedavnoISO) return;             // už se neplatí
+      var p = zISO(posledni.datum);
+      var dalsi = new Date(p.getFullYear(), p.getMonth() + 1, Math.min(p.getDate(), 28));
+      vysledek.push({
+        nazev: z.nazev, klic: z.klic, castka: Math.round(med * 100) / 100,
+        ikona: z.ikona, barva: z.barva, katId: z.katId,
+        mesicu: klice.length, dalsi: naISO(dalsi)
+      });
+    });
+    return vysledek.sort(function (a, b) { return b.castka - a.castka; });
+  }
+
+  /**
+   * Útrata tohoto měsíce proti stejnému úseku minulého (do stejného dne).
+   * U uplynulého měsíce se srovnává celý s celým.
+   */
+  function srovnaniSMinulym(rok, mesic) {
+    var dnes = new Date();
+    var jeAktualni = dnes.getFullYear() === rok && dnes.getMonth() === mesic;
+    var doDne = jeAktualni ? dnes.getDate() : 31;
+    var min = new Date(rok, mesic - 1, 1);
+    function utrata(r, m) {
+      return vMesici(r, m).reduce(function (a, t) {
+        return a + (t.typ === 'vydaj' && +t.datum.slice(8, 10) <= doDne ? t.castka : 0);
+      }, 0);
+    }
+    var ted = utrata(rok, mesic), minule = utrata(min.getFullYear(), min.getMonth());
+    return {
+      ted: ted, minule: minule, mesic: min.getMonth(),
+      podil: minule > 0 ? ted / minule - 1 : null, doDne: jeAktualni ? doDne : null
+    };
+  }
+
   /* ---------- podklady pro grafy ---------- */
 
   var DNY_KRATCE = ['po', 'út', 'st', 'čt', 'pá', 'so', 'ne'];
@@ -872,6 +985,10 @@
     ucet: ucet,
     kategorieTypu: kategorieTypu,
     kategoriePodlePouziti: kategoriePodlePouziti,
+    podleObchodu: podleObchodu,
+    pravidelnePlatby: pravidelnePlatby,
+    srovnaniSMinulym: srovnaniSMinulym,
+    hezkyNazev: hezkyNazev,
     serazene: serazene,
     vMesici: vMesici,
     souhrn: souhrn,

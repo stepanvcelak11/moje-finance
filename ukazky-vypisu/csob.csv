@@ -1,0 +1,8 @@
+Èíslo úètu;123456789/0300
+Mìna;CZK
+Období;01.09.2026 - 22.09.2026
+
+Èíslo úètu;Datum zaúètování;Èástka;Mìna;Zùstatek;Èíslo úètu protiúètu;Kód banky protiúètu;Název úètu protiúètu;Konstantní symbol;Variabilní symbol;Specifickı symbol;Oznaèení operace;ID transakce;Poznámka
+123456789;03.09.2026;-156,00;CZK;9844,00;;;;;;;Transakce platební kartou;T1;Místo: PENNY MARKET, PRAHA
+123456789;05.09.2026;-89,00;CZK;9755,00;;;;;;;Transakce platební kartou;T2;Místo: SPOTIFY P1234
+123456789;10.09.2026;28000,00;CZK;37755,00;987654321;0100;ZAMESTNAVATEL A.S.;;202609;;Pøíchozí platba;T3;MZDA ZARI

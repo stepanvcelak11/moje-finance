@@ -1,0 +1,9 @@
+mBank S.A., organizaèní složka
+#Pro období:;01.09.2026;22.09.2026;
+
+#Datum uskuteènìní transakce;#Datum zaúètování transakce;#Popis transakce;#Zpráva pro pøíjemce;#Plátce/Pøíjemce;#Èíslo úètu plátce/pøíjemce;#KS;#VS;#SS;#Èástka transakce;#Úèetní zùstatek po transakci;
+06.09.2026;07.09.2026;PLATBA KARTOU;;ROSSMANN 045 BRNO;;;;;-231,90;5 768,10;
+11.09.2026;11.09.2026;PØÍCHOZÍ PLATBA;vratka zaloha;PETR NOVAK;1234567890/0800;;;;750,00;6 518,10;
+16.09.2026;17.09.2026;PLATBA KARTOU;;MCDONALDS 123;;;;;-179,00;6 339,10;
+
+#Koneèný zùstatek:;6 339,10 CZK;
