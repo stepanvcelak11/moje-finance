@@ -96,7 +96,14 @@ with sync_playwright() as p:
     page.goto("http://127.0.0.1:%d/index.html" % PORT)
     page.wait_for_timeout(700)
 
-    # ---------- zamek: prvni spusteni ----------
+    # ---------- prvni spusteni: bez PINu rovnou do appky ----------
+    kontrola("prvni spusteni bez PINu", not page.is_visible("#zamek") and
+             page.is_visible("#pohled-prehled"))
+    kontrola("prazdna appka nabizi dve cesty", page.is_visible("#karta-start"))
+
+    # ---------- zamek se zapina dobrovolne ve Vic ----------
+    page.click(".nav-tl[data-jdi='nastaveni']"); page.wait_for_timeout(350)
+    page.click("#tl-zapni-zamek"); page.wait_for_timeout(300)
     kontrola("zamek se pta na novy PIN", page.is_visible("#zamek") and
              "Zvolte PIN" in txt("#zamek-popis"), txt("#zamek-popis"))
     kontrola("appka je schovana", not page.is_visible("#obsah"))
@@ -116,13 +123,21 @@ with sync_playwright() as p:
     kontrola("data jsou v trezoru", "moje-finance-trezor-v1" in ulozene, str(ulozene))
     kontrola("nesifrovana kopie smazana", "moje-finance-v1" not in ulozene, str(ulozene))
 
-    # ---------- zapis vydaje ----------
+    # ---------- zapis vydaje: castka, podrobnosti, klepnuti na kategorii = ulozeno ----------
     page.click("#tl-pridat"); page.wait_for_timeout(300)
+    kontrola("podrobnosti jsou u noveho zapisu zavrene",
+             not page.is_visible("#pole-pozn"))
+    kontrola("castka ma hned kurzor",
+             page.evaluate("document.activeElement && document.activeElement.id") == "pole-castka")
     page.fill("#pole-castka", "349,50")
-    page.click("[data-vyberkat='k-potraviny']")
+    page.click("#zapis-podrobnosti summary"); page.wait_for_timeout(150)
     page.click("[data-vyberucet='u-karta']")
     page.fill("#pole-pozn", "Lidl velky nakup")
-    page.click("#zaznam-ulozit"); page.wait_for_timeout(500)
+    kontrola("souhrn podrobnosti", "Lidl velky nakup" in txt("#podrobnosti-souhrn") and
+             "Běžný účet" in txt("#podrobnosti-souhrn"), txt("#podrobnosti-souhrn"))
+    page.click("[data-vyberkat='k-potraviny']"); page.wait_for_timeout(500)
+    kontrola("klepnuti na kategorii ulozilo", page.is_hidden("#prekryv-zaznam"))
+    kontrola("hlaska nabizi vraceni zapisu", page.is_visible(".hlaska-zpet"))
     kontrola("zustatek po vydaji", "349,5" in txt("#hero-zustatek"), txt("#hero-zustatek"))
     kontrola("kategorie v grafu", "Potraviny" in txt("#graf-kategorie"))
     kontrola("podilovy pruh", page.query_selector(".podil-dil") is not None)
@@ -131,28 +146,32 @@ with sync_playwright() as p:
     kontrola("trezor neprozrazuje obsah",
              "Potraviny" not in trezor and "Lidl" not in trezor, trezor[:80])
 
-    # ---------- rychle castky a vyraz ----------
+    # ---------- bez castky se neulozi, vyraz v castce ----------
     page.click("#tl-pridat"); page.wait_for_timeout(250)
-    page.click("[data-rychla='500']"); page.click("[data-rychla='100']")
-    kontrola("rychle castky scitaji", page.input_value("#pole-castka") == "600",
-             page.input_value("#pole-castka"))
-    page.click("[data-vyberkat='k-doprava']")
-    page.click("#zaznam-ulozit"); page.wait_for_timeout(400)
+    page.click("[data-vyberkat='k-doprava']"); page.wait_for_timeout(250)
+    kontrola("bez castky se neulozi", page.is_visible("#prekryv-zaznam") and
+             "částku" in txt("#hlaska"), txt("#hlaska"))
+    page.fill("#pole-castka", "600")
+    page.click("[data-vyberkat='k-doprava']"); page.wait_for_timeout(400)
 
     page.click("#tl-pridat"); page.wait_for_timeout(250)
+    kontrola("nejcastejsi kategorie je prvni",
+             page.get_attribute("#vyber-kategorie .kat-tl", "data-vyberkat") in ("k-potraviny", "k-doprava"),
+             str(page.get_attribute("#vyber-kategorie .kat-tl", "data-vyberkat")))
     page.fill("#pole-castka", "120+35")
-    page.click("[data-vyberkat='k-restaurace']")
-    page.click("#zaznam-ulozit"); page.wait_for_timeout(400)
+    if not page.is_visible("[data-vyberkat='k-restaurace']"):
+        page.click("#kat-dalsi"); page.wait_for_timeout(150)
+    page.click("[data-vyberkat='k-restaurace']"); page.wait_for_timeout(400)
     kontrola("vyraz 120+35", "155" in txt("#graf-kategorie"))
 
     # ---------- prijem ----------
     page.click("#tl-pridat"); page.wait_for_timeout(250)
     page.click("#prepinac-typ [data-typ='prijem']"); page.wait_for_timeout(150)
     page.fill("#pole-castka", "42000")
-    page.click("[data-vyberkat='p-vyplata']")
-    page.click("[data-vyberucet='u-karta']")
-    page.click("#zaznam-ulozit"); page.wait_for_timeout(450)
-    kontrola("prijem zapsan", "42 000" in txt("#souhrn-prijmy"), txt("#souhrn-prijmy"))
+    page.click("[data-vyberkat='p-vyplata']"); page.wait_for_timeout(450)
+    kontrola("prijem zapsan", "42 000" in txt("#hero-prijmy"), txt("#hero-prijmy"))
+    kontrola("zbyva na den", "na den" in txt("#souhrn-rozdil-pod") or
+             "Zbývá" in txt("#souhrn-rozdil-pod"), txt("#souhrn-rozdil-pod"))
 
     # ---------- V2: prstenec ----------
     kontrola("prstenec vykreslen", page.query_selector("#prstenec .prstenec-cara") is not None)
@@ -274,6 +293,7 @@ with sync_playwright() as p:
 
     # ---------- nakup vice veci najednou ----------
     page.click("#tl-pridat"); page.wait_for_timeout(350)
+    page.click("#zapis-podrobnosti summary"); page.wait_for_timeout(150)
     page.click("#tl-polozky"); page.wait_for_timeout(300)
     kontrola("rezim polozek", page.is_visible("#polozky-blok"))
     page.fill("[data-polozka-nazev='0']", "rohliky")

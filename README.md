@@ -9,30 +9,44 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 
 ## Co umí
 
-**Zámek**
-- při startu **PIN**, volitelně otisk prstu nebo obličej
+**Výpis z banky (verze 2.0) – aby se nemuselo zapisovat všechno ručně**
+- v internetovém bankovnictví stáhnete pohyby jako **CSV** (nebo GPC/ABO) a appka je načte
+- sloupce pozná sama podle hlavičky (vyzkoušeno na napodobeninách exportu Fio, Air Bank,
+  Revolut, George/ČS a GPC – viz `ukazky-vypisu/`); kdyby nesedly, dají se přehodit ručně
+- **kategorie doplní sama**: vestavěný slovník obchodů (Lidl, Albert, Shell, Wolt, Netflix,
+  ČEZ, dm…) + to, co jste jednou opravili – appka si to pamatuje na příští výpis
+- výběr z bankomatu zapíše jako převod do Hotovosti
+- stejný výpis jde načíst znovu, co už v appce je, se podruhé nezapíše; co jste možná
+  zapsali ručně, nabídne jen k potvrzení
+- po zápisu se zeptá, jestli sedí zůstatek s bankou, a srovná ho
+- po týdnu bez výpisu připomene načtení nového
+
+**Zámek (dobrovolný)**
+- od verze 2.0 se **při prvním spuštění nevynucuje** – zapíná se ve *Víc → Zabezpečení*
+- **PIN**, volitelně otisk prstu nebo obličej
 - data v telefonu jsou **zašifrovaná** (AES‑GCM, klíč z PINu přes PBKDF2) – bez PINu se z prohlížeče nedá nic přečíst
 - zamyká se samo, když je aplikace chvíli na pozadí (nastavitelné)
 - ⚠ zapomenutý PIN nejde obnovit, proto si držte zálohu
 
 **Přehled (hlavní obrazovka)**
-- zůstatek celkem a po jednotlivých účtech
-- **kolik padlo dnes a kolik za tento týden** (klepnutím rovnou na ty záznamy)
-- příjmy a výdaje za vybraný měsíc, kolik zbylo a kolik to je na den do konce měsíce
-- **prstencový ukazatel** – kolik procent příjmů je utraceno, zeleně / oranžově / červeně
+- prázdná appka nabídne dvě cesty: načíst výpis, nebo zapsat ručně
+- jedna hlavní karta: **kolik je utraceno tento měsíc**, prstenec (kolik procent příjmů),
+  kolik zbývá a kolik to je na den; pod tím **dnes / tento týden / na účtech**
+- **Rychle zapsat** – nejčastější ruční zápisy jako tlačítka, jedno klepnutí zapíše
 - „Kam šly peníze" – dělený pruh + žebříček kategorií s částkou i podílem (klepnutím se prokliknete na ty záznamy)
 - **odznak trendu** u největších kategorií: o kolik se liší od průměru předchozích měsíců za stejně dlouhý úsek
 - rozpočty s ukazatelem čerpání
-- posledních 6 měsíců vedle sebe (příjmy × výdaje), klepnutím na sloupec se vypíšou čísla
 - poslední pohyby s barevnou ikonou podle kategorie
 
 **Zápis**
+- **napíšete částku a klepnete na kategorii – tím je zapsáno** (hláška nabídne *Zpět*)
+- kategorie jsou seřazené podle toho, co používáte; vidět je 7 nejčastějších, zbytek pod *Další*
+- účet, datum, poznámka, položky a účtenka jsou schované v rozbalovacím řádku *Účet, datum, poznámka*
 - výdaj, příjem a **převod mezi účty** (převod nemění celkový majetek, jen ho přesouvá)
 - **nákup rozepsaný na položky** – jeden nákup, víc věcí, každá do své kategorie; částka se
   sečte sama a v přehledech se každá položka započítá tam, kam patří
 - **fotka účtenky** u záznamu; se zapnutým zámkem je zašifrovaná stejně jako ostatní data
-- **dlouhý stisk na `+`** nabídne tři nejčastější kombinace – jedno klepnutí zapíše, hláška nabídne vrácení
-- rychlá tlačítka +50 / +100 / +200 / +500 / +1 000, která se sčítají
+- **dlouhý stisk na `+`** nabídne nejčastější kombinace – jedno klepnutí zapíše, hláška nabídne vrácení
 - do částky lze napsat i počet: `120+35` uloží 155
 - aplikace si pamatuje naposledy použitý účet a kategorii
 
@@ -41,14 +55,16 @@ Běží v prohlížeči, jde ji nainstalovat na plochu telefonu jako běžnou ap
 - filtry: typ, období (měsíc / rok / vše), fulltext v poznámkách, kategoriích a účtech
 - klepnutím na záznam se otevře úprava i mazání
 
-**Grafy** (z Přehledu tlačítkem *Víc grafů*, nebo z *Víc*)
+**Grafy** (z Přehledu tlačítkem *Grafy →*, nebo z *Víc*)
+- posledních 6 měsíců vedle sebe (příjmy × výdaje), klepnutím na sloupec se vypíšou čísla
 - útrata den po dni s vyznačeným dneškem a průměrem
 - narůstající útrata proti stejné části minulého měsíce
 - ve který den v týdnu utrácíte nejvíc
 - vývoj zůstatku za 12 měsíců
 - odkud peníze odcházejí (po účtech) a odkud přicházejí (po kategoriích)
 
-**Účty** – libovolný počet, počáteční stav, vlastní ikona a barva.
+**Účty** – libovolný počet, vlastní ikona a barva. U účtu se píše **kolik na něm je teď**
+(podle banky), počáteční stav si appka dopočítá.
 
 **Víc**
 - zabezpečení: změna PINu, odemykání otiskem, za jak dlouho zamknout, vypnutí zámku
@@ -139,12 +155,15 @@ Soubory:
 | `css/styl.css` | vzhled, barvy (světlé i tmavé téma) |
 | `js/data.js` | uložení dat a všechny výpočty (zůstatky, souhrny, rozpočty, export) |
 | `js/grafy.js` | grafy z HTML a SVG prvků, bez knihovny |
+| `js/import.js` | rozbor výpisu z banky (CSV, GPC), slovník obchodů, otisky proti dvojímu načtení |
 | `js/ikony.js` | vektorové ikony (sada Lucide, licence ISC – viz `LICENCE-IKONY.txt`) |
 | `js/zamek.js` | PIN, biometrika, šifrování a obrazovka zámku |
 | `js/app.js` | obrazovky, formuláře, obsluha klepnutí |
 | `sw.js` | offline vrstva |
 | `ikony/` | ikony aplikace |
 | `test-proklikani.py` | automatický proklik aplikace v prohlížeči (Playwright) |
+| `test-import.py` | proklik načtení výpisu z banky (39 kontrol) |
+| `ukazky-vypisu/` | napodobeniny výpisů z bank pro test (`vyrob.py` je vyrobí znovu) |
 
 ⚠ **Po každé úpravě zvedněte `VERZE` v `sw.js`** (`moje-finance-v1` → `v2` → …),
 jinak telefon podrží starou verzi z mezipaměti a změny se neprojeví.
@@ -167,6 +186,7 @@ Po vlastních úpravách si totéž pustíte znovu:
 
 ```
 python test-proklikani.py
+python test-import.py
 ```
 
 (potřebuje `pip install playwright` a `playwright install chromium`; na konci vypíše `POTIZE: 0`).

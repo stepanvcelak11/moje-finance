@@ -28,10 +28,28 @@
   <!-- ============ PŘEHLED ============ -->
   <section class="pohled" id="pohled-prehled">
 
-    <div class="karta hero">
-      <div class="hero-popis">Zůstatek celkem</div>
-      <div class="hero-cislo" id="hero-zustatek">0 Kč</div>
-      <div class="hero-radek" id="hero-uctu"></div>
+    <div class="karta start" id="karta-start" hidden>
+      <h2 class="start-nadpis">Jak chcete začít?</h2>
+      <button class="start-volba start-volba-hlavni" data-akce="import">
+        <span class="start-ikona" data-ikona="ui-nahrat"></span>
+        <span><b>Načíst výpis z banky</b><i>Platby kartou se zapíšou a roztřídí samy. Stačí jednou za čas.</i></span>
+      </button>
+      <button class="start-volba" data-akce="pridat">
+        <span class="start-ikona" data-ikona="ui-plus"></span>
+        <span><b>Zapsat útratu ručně</b><i>Částka a klepnutí na kategorii – víc nic.</i></span>
+      </button>
+    </div>
+
+    <div class="karta hero" id="karta-hero">
+      <div class="hero-hlavni">
+        <div class="prstenec" id="prstenec"></div>
+        <div class="hero-text">
+          <div class="hero-popis" id="hero-popis">Utraceno tento měsíc</div>
+          <div class="hero-cislo" id="hero-utraceno">0 Kč</div>
+          <div class="hero-prijmy" id="hero-prijmy"></div>
+        </div>
+      </div>
+      <div class="hero-zbyva" id="souhrn-rozdil-pod"></div>
       <div class="hero-dnes">
         <button class="hero-dnes-dil" id="hero-dnes">
           <span class="hero-dnes-popis">Dnes</span>
@@ -41,39 +59,28 @@
           <span class="hero-dnes-popis">Tento týden</span>
           <span class="hero-dnes-cislo">0 Kč</span>
         </button>
+        <button class="hero-dnes-dil" data-jdi="ucty">
+          <span class="hero-dnes-popis">Na účtech</span>
+          <span class="hero-dnes-cislo" id="hero-zustatek">0 Kč</span>
+        </button>
       </div>
     </div>
 
-    <div class="dvojice">
-      <div class="karta dlazdice">
-        <div class="dlazdice-hlava"><span class="tecka tecka-prijem"></span>Příjmy</div>
-        <div class="dlazdice-cislo prijem" id="souhrn-prijmy">0 Kč</div>
-        <div class="dlazdice-pod" id="souhrn-prijmy-pocet">&nbsp;</div>
-      </div>
-      <div class="karta dlazdice">
-        <div class="dlazdice-hlava"><span class="tecka tecka-vydaj"></span>Výdaje</div>
-        <div class="dlazdice-cislo vydaj" id="souhrn-vydaje">0 Kč</div>
-        <div class="dlazdice-pod" id="souhrn-vydaje-pocet">&nbsp;</div>
-      </div>
+    <div class="rychle-pas" id="rychle-pas" hidden>
+      <div class="rychle-nadpis">Rychle zapsat <span>jedním klepnutím</span></div>
+      <div class="rychle-chipy" id="rychle-chipy"></div>
     </div>
 
-    <div class="karta">
-      <div class="karta-hlava">
-        <h2>Zůstalo za měsíc</h2>
-      </div>
-      <div class="rozdil-blok">
-        <div class="prstenec" id="prstenec"></div>
-        <div class="rozdil-text">
-          <div class="rozdil-cislo" id="souhrn-rozdil">0 Kč</div>
-          <div class="rozdil-pod" id="souhrn-rozdil-pod">Zatím žádné záznamy v tomto měsíci.</div>
-        </div>
-      </div>
+    <div class="karta pripominka" id="karta-import" hidden>
+      <span class="pripominka-ikona" data-ikona="ui-nahrat"></span>
+      <span class="pripominka-text" id="import-pripominka"></span>
+      <button class="tl tl-hlavni tl-male" data-akce="import">Načíst</button>
     </div>
 
     <div class="karta" id="karta-kategorie">
       <div class="karta-hlava">
         <h2>Kam šly peníze</h2>
-        <span class="karta-doplnek" id="kategorie-celkem"></span>
+        <button class="odkaz" data-jdi="grafy">Grafy →</button>
       </div>
       <div id="graf-podil"></div>
       <div id="graf-kategorie" class="kat-seznam"></div>
@@ -88,15 +95,7 @@
       <div id="seznam-rozpoctu"></div>
     </div>
 
-    <div class="karta">
-      <div class="karta-hlava">
-        <h2>Posledních 6 měsíců</h2>
-        <button class="odkaz" data-jdi="grafy">Víc grafů →</button>
-      </div>
-      <div id="graf-mesice"></div>
-    </div>
-
-    <div class="karta">
+    <div class="karta" id="karta-pohyby">
       <div class="karta-hlava">
         <h2>Poslední pohyby</h2>
         <button class="odkaz" data-jdi="historie">Vše</button>
@@ -136,14 +135,20 @@
     </div>
     <div id="seznam-uctu"></div>
     <div class="tlacitka-radek">
-      <button class="tl tl-hlavni" id="tl-novy-ucet">+ Nový účet</button>
+      <button class="tl tl-hlavni tl-radek" data-akce="import"><span data-ikona="ui-nahrat"></span> Načíst výpis z banky</button>
+      <button class="tl" id="tl-novy-ucet">+ Nový účet</button>
       <button class="tl" id="tl-prevod">↔ Převod mezi účty</button>
     </div>
-    <p class="napoveda">Zůstatek účtu = počáteční stav + příjmy − výdaje − odchozí převody + příchozí převody.</p>
+    <p class="napoveda">Nesedí zůstatek s bankou? Klepněte na účet a napište, kolik na něm opravdu je – appka si to srovná.</p>
   </section>
 
   <!-- ============ GRAFY ============ -->
   <section class="pohled" id="pohled-grafy" hidden>
+    <div class="karta">
+      <div class="karta-hlava"><h2>Posledních 6 měsíců</h2></div>
+      <div id="graf-mesice"></div>
+    </div>
+
     <div class="karta">
       <div class="karta-hlava"><h2>Útrata den po dni</h2></div>
       <div id="graf-dny"></div>
@@ -181,8 +186,15 @@
   <section class="pohled" id="pohled-nastaveni" hidden>
 
     <button class="tl tl-siroke tl-radek" style="margin-top:0" data-jdi="grafy">
-      <span id="ikona-grafy"></span> Grafy a rozbory
+      <span data-ikona="ui-grafy"></span> Grafy a rozbory
     </button>
+
+    <div class="karta">
+      <div class="karta-hlava"><h2>Výpis z banky</h2></div>
+      <p class="napoveda napoveda-nahore">Místo zapisování každé platby načtěte jednou za čas výpis z internetového bankovnictví (CSV nebo GPC). Kategorie se doplní samy a co opravíte, si appka pamatuje.</p>
+      <button class="tl tl-hlavni tl-siroke tl-radek" style="margin-top:0" data-akce="import"><span data-ikona="ui-nahrat"></span> Načíst výpis</button>
+      <div class="statistika" id="stav-pravidel"></div>
+    </div>
 
 
     <div class="karta">
@@ -272,14 +284,10 @@
       </div>
 
       <div class="castka-blok">
-        <input type="text" inputmode="decimal" id="pole-castka" class="castka-pole" placeholder="0" autocomplete="off">
+        <input type="text" inputmode="decimal" enterkeyhint="done" id="pole-castka" class="castka-pole" placeholder="0" autocomplete="off">
         <span class="castka-mena" id="castka-mena">Kč</span>
       </div>
-      <div class="rychle-castky" id="rychle-castky"></div>
-
-      <button class="tl tl-siroke tl-radek" id="tl-polozky" style="margin-top:0">
-        <span data-ikona="ui-historie"></span> Rozepsat na položky
-      </button>
+      <p class="zapis-napoveda" id="zapis-napoveda">Napište částku a klepněte na kategorii – tím je zapsáno.</p>
 
       <div class="skupina" id="polozky-blok" hidden>
         <div class="skupina-nadpis">
@@ -297,31 +305,39 @@
         <div class="kat-mrizka" id="vyber-kategorie"></div>
       </div>
 
-      <div class="skupina">
-        <div class="skupina-nadpis" id="popis-ucet">Účet</div>
-        <div class="chipy chipy-obal" id="vyber-uctu"></div>
-      </div>
+      <details class="podrobnosti" id="zapis-podrobnosti">
+        <summary><span>Účet, datum, poznámka</span><span class="podrobnosti-souhrn" id="podrobnosti-souhrn"></span></summary>
 
-      <div class="skupina" id="skupina-ucet-do" hidden>
-        <div class="skupina-nadpis">Kam</div>
-        <div class="chipy chipy-obal" id="vyber-uctu-do"></div>
-      </div>
+        <div class="skupina">
+          <div class="skupina-nadpis" id="popis-ucet">Účet</div>
+          <div class="chipy chipy-obal" id="vyber-uctu"></div>
+        </div>
 
-      <label class="radek-pole">
-        <span>Datum</span>
-        <input type="date" id="pole-datum" class="pole">
-      </label>
+        <div class="skupina" id="skupina-ucet-do" hidden>
+          <div class="skupina-nadpis">Kam</div>
+          <div class="chipy chipy-obal" id="vyber-uctu-do"></div>
+        </div>
 
-      <label class="radek-pole radek-pole-sloupec">
-        <span>Poznámka</span>
-        <input type="text" id="pole-pozn" class="pole" placeholder="např. nákup Lidl, benzín, oběd" autocomplete="off">
-      </label>
+        <label class="radek-pole">
+          <span>Datum</span>
+          <input type="date" id="pole-datum" class="pole">
+        </label>
 
-      <div class="skupina" id="skupina-uctenka">
-        <div class="skupina-nadpis">Účtenka</div>
-        <div id="uctenka-obal"></div>
-        <input type="file" id="pole-fotka" accept="image/*" capture="environment" hidden>
-      </div>
+        <label class="radek-pole radek-pole-sloupec">
+          <span>Poznámka</span>
+          <input type="text" id="pole-pozn" class="pole" placeholder="např. Lidl, benzín, oběd" autocomplete="off" enterkeyhint="done">
+        </label>
+
+        <button class="tl tl-siroke tl-radek" id="tl-polozky" style="margin-top:6px">
+          <span data-ikona="ui-historie"></span> Rozepsat nákup na položky
+        </button>
+
+        <div class="skupina" id="skupina-uctenka" style="margin-top:14px">
+          <div class="skupina-nadpis">Účtenka</div>
+          <div id="uctenka-obal"></div>
+          <input type="file" id="pole-fotka" accept="image/*" capture="environment" hidden>
+        </div>
+      </details>
 
       <button class="tl tl-nebezpeci tl-siroke" id="zaznam-smazat" hidden>Smazat záznam</button>
     </div>
@@ -356,6 +372,22 @@
   </div>
 </div>
 
+<!-- ============ VÝPIS Z BANKY ============ -->
+<div class="prekryv" id="prekryv-import" hidden>
+  <div class="list list-plny" role="dialog" aria-modal="true" aria-label="Výpis z banky">
+    <div class="list-hlava">
+      <button class="list-zavrit" id="import-zavrit">Zavřít</button>
+      <strong>Výpis z banky</strong>
+      <span style="width:52px"></span>
+    </div>
+    <div class="list-telo" id="import-telo"></div>
+    <div class="list-pata" id="import-pata" hidden>
+      <button class="tl tl-hlavni" id="import-zapsat">Zapsat</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="pole-vypis" hidden>
+
 <!-- ============ PROHLÍŽEČ ÚČTENKY ============ -->
 <div class="prekryv prekryv-fotka" id="prekryv-fotka" hidden>
   <img id="fotka-velka" alt="Účtenka">
@@ -383,6 +415,7 @@
 <script src="js/ikony.js"></script>
 <script src="js/data.js"></script>
 <script src="js/grafy.js"></script>
+<script src="js/import.js"></script>
 <script src="js/zamek.js"></script>
 <script src="js/app.js"></script>
 </body>

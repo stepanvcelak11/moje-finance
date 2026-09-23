@@ -1,0 +1,5 @@
+"Datum provedení";"Směr úhrady";"Typ úhrady";"Skupina plateb";"Měna účtu";"Částka v měně účtu";"Poplatek v měně účtu";"Původní měna úhrady";"Původní částka úhrady";"Název protistrany";"Číslo účtu protistrany";"Název účtu protistrany";"Variabilní symbol";"Konstantní symbol";"Specifický symbol";"Poznámka pro mne";"Zpráva pro příjemce";"Poznámka k úhradě";"Obchodní místo"
+"03.09.2026";"Odchozí";"Platba kartou";"Nákupy";"CZK";"-245,00";"0,00";"CZK";"-245,00";"ALBERT 0612";"";"";"";"";"";"";"";"";"ALBERT 0612, PRAHA"
+"04.09.2026";"Odchozí";"Platba kartou";"Nákupy";"CZK";"-1 499,00";"0,00";"CZK";"-1 499,00";"DATART";"";"";"";"";"";"";"";"";"DATART, BRNO"
+"09.09.2026";"Příchozí";"Bezhotovostní";"";"CZK";"500,00";"0,00";"CZK";"500,00";"Jana Nováková";"1234567/0800";"";"";"";"";"";"vraceni za listky";"";""
+"11.09.2026";"Odchozí";"Trvalý příkaz";"Bydlení";"CZK";"-9 800,00";"0,00";"CZK";"-9 800,00";"Pronajímatel Dvořák";"2233445566/0300";"";"";"";"";"";"najem zari";"";""

@@ -8,7 +8,7 @@
   var G = global.FGrafy;
   var esc = G.esc;
 
-  var VERZE = '1.0';
+  var VERZE = '2.0';
 
   /* ---------- krátké pomůcky ---------- */
 
@@ -105,6 +105,7 @@
     $('prekryv-dialog').hidden = true;
     dialogPotvrd = null;
     vyberRok = null;
+    vyberImport = null;
   }
 
   /* =================================================================
@@ -176,29 +177,30 @@
     var s = D.stav();
     var vMesici = D.vMesici(rok, mesic);
     var souhrn = D.souhrn(vMesici);
+    var prazdno = s.transakce.length === 0;
 
-    // zůstatek
+    // úplný začátek: dvě cesty místo prázdných grafů
+    $('karta-start').hidden = !prazdno;
+    $('karta-hero').hidden = prazdno;
+    $('karta-kategorie').hidden = prazdno;
+    $('karta-pohyby').hidden = prazdno;
+
+    // hlavní číslo: kolik odešlo tento měsíc
+    var dnes = new Date();
+    var jeAktualni = dnes.getFullYear() === rok && dnes.getMonth() === mesic;
+    $('hero-popis').textContent = 'Utraceno ' + (jeAktualni ? 'tento měsíc' : 'v ' + D.MESICE_V[mesic].toLowerCase());
+    $('hero-utraceno').textContent = kc(Math.round(souhrn.vydaje));
+    $('hero-prijmy').innerHTML = souhrn.prijmy
+      ? 'příjmy <b class="prijem">' + esc(kc(souhrn.prijmy)) + '</b>'
+      : 'příjem zatím nezapsaný';
     $('hero-zustatek').textContent = kc(D.celkovyZustatek());
-    $('hero-uctu').innerHTML = s.ucty.map(function (u) {
-      return '<span class="hero-znacka">' + ik(u.ikona) + esc(u.nazev) +
-        ' <b>' + esc(kc(D.zustatekUctu(u.id))) + '</b></span>';
-    }).join('');
-
-    // příjmy / výdaje
-    $('souhrn-prijmy').textContent = kc(souhrn.prijmy);
-    $('souhrn-vydaje').textContent = kc(souhrn.vydaje);
-    $('souhrn-prijmy-pocet').textContent = souhrn.pocetP ? souhrn.pocetP + '× za měsíc' : 'zatím nic';
-    $('souhrn-vydaje-pocet').textContent = souhrn.pocetV ? souhrn.pocetV + '× za měsíc' : 'zatím nic';
 
     // dnes a tento týden
     var dnesS = D.souhrnDnes(), tydenS = D.souhrnTydne();
     $('hero-dnes').lastElementChild.textContent = kc(dnesS.vydaje);
     $('hero-tyden').lastElementChild.textContent = kc(tydenS.vydaje);
 
-    // rozdíl s prstencem
-    $('souhrn-rozdil').textContent = kcZnak(souhrn.rozdil);
-    $('souhrn-rozdil').className = 'rozdil-cislo ' + (souhrn.rozdil < 0 ? 'vydaj' : (souhrn.rozdil > 0 ? 'prijem' : ''));
-
+    // prstenec: kolik procent příjmů je pryč
     var podilUtraty = souhrn.prijmy > 0 ? souhrn.vydaje / souhrn.prijmy : (souhrn.vydaje > 0 ? 1 : 0);
     var procenta = Math.round(podilUtraty * 100);
     var barvaPrstence, stred, podStredem;
@@ -209,20 +211,24 @@
     } else {
       barvaPrstence = podilUtraty >= 1 ? 'var(--vydaj)'
         : (podilUtraty >= 0.8 ? 'var(--varovani)' : 'var(--prijem)');
-      stred = procenta + ' %'; podStredem = 'utraceno';
+      stred = procenta + ' %'; podStredem = 'z příjmů';
     }
     $('prstenec').innerHTML = G.prstenec(podilUtraty, barvaPrstence, stred, podStredem);
 
-    var pod;
-    if (!souhrn.pocetP && !souhrn.pocetV) pod = 'Zatím žádné záznamy v tomto měsíci.';
-    else if (souhrn.prijmy === 0) pod = 'Bez zapsaného příjmu – utraceno ' + kc(souhrn.vydaje) + '.';
-    else if (souhrn.rozdil >= 0) pod = 'Z příjmů jste utratili ' + procenta + ' %. Zbývá ' + kc(souhrn.rozdil) + '.';
-    else pod = 'Výdaje převyšují příjmy o ' + kc(-souhrn.rozdil) + '. Rozdíl jde z úspor.';
-    var denVMesici = pocetDniZbyva();
-    if (denVMesici > 0 && souhrn.rozdil > 0) {
-      pod += ' Do konce měsíce ' + denVMesici + ' dní, to je ' + kc(souhrn.rozdil / denVMesici) + ' na den.';
+    var pod = '';
+    if (souhrn.prijmy > 0 && souhrn.rozdil >= 0) {
+      pod = 'Zbývá <b class="prijem">' + esc(kc(souhrn.rozdil)) + '</b>';
+      var dni = pocetDniZbyva();
+      if (dni > 0) pod += ' · ' + dni + ' ' + tvarDni(dni) + ' do konce měsíce, to je <b>' +
+        esc(kc(Math.floor(souhrn.rozdil / dni))) + '</b> na den';
+    } else if (souhrn.prijmy > 0) {
+      pod = 'Výdaje jsou o <b class="vydaj">' + esc(kc(-souhrn.rozdil)) + '</b> vyšší než příjmy.';
     }
-    $('souhrn-rozdil-pod').textContent = pod;
+    $('souhrn-rozdil-pod').innerHTML = pod;
+    $('souhrn-rozdil-pod').hidden = !pod;
+
+    vykresliRychle();
+    vykresliPripominkuImportu();
 
     // kategorie
     var kategorie = D.podleKategorii(vMesici, 'vydaj');
@@ -231,17 +237,11 @@
     $('kategorie-prazdno').hidden = jsou;
     $('graf-podil').innerHTML = jsou ? G.pruhPodilu(kategorie, kc) : '';
     $('graf-kategorie').innerHTML = jsou ? G.seznamKategorii(kategorie, kc, trendy) : '';
-    $('kategorie-celkem').textContent = jsou ? kategorie.length + ' kategorií · ' + kc(souhrn.vydaje) : '';
 
     // rozpočty
     var rozpocty = D.stavRozpoctu(rok, mesic);
     $('karta-rozpocty').hidden = rozpocty.length === 0;
     $('seznam-rozpoctu').innerHTML = rozpocty.map(rozpocetHtml).join('');
-
-    // měsíce
-    var mesice = D.poslednichMesicu(rok, mesic, 6);
-    $('graf-mesice').innerHTML = G.grafMesicu(mesice, mesicVGrafu);
-    ctiMesic(mesice, mesicVGrafu);
 
     // poslední pohyby
     var posledni = D.serazene().filter(function (t) { return t.datum.slice(0, 7) === D.klicMesice(rok, mesic); }).slice(0, 5);
@@ -249,6 +249,34 @@
     $('posledni-pohyby').innerHTML = posledni.length
       ? '<div class="skupina-karta">' + posledni.map(polozkaHtml).join('') + '</div>'
       : '<p class="prazdno">Zatím nic. Přidejte první záznam tlačítkem +.</p>';
+  }
+
+  function tvarDni(n) { return n === 1 ? 'den' : (n >= 2 && n <= 4 ? 'dny' : 'dní'); }
+
+  /** Pás „Rychle zapsat“ – nejčastější ruční zápisy, jedno klepnutí. */
+  function vykresliRychle() {
+    var seznam = D.sablony(6);
+    ulozeneSablony = seznam;
+    $('rychle-pas').hidden = seznam.length === 0;
+    $('rychle-chipy').innerHTML = seznam.map(function (z, i) {
+      return '<button class="rychly-chip" data-rychly="' + i + '" style="--kat-barva:' + G.barva(z.barva) + '">' +
+        ik(z.ikona) + '<span>' + esc(z.poznamka || z.nazev) + '</span><b>' +
+        esc(cislo(z.castka)) + '</b></button>';
+    }).join('');
+  }
+
+  var DEN_MS = 86400000;
+
+  function vykresliPripominkuImportu() {
+    var n = D.stav().nastaveni;
+    var el = $('karta-import');
+    if (!n.posledniImport) { el.hidden = true; return; }
+    var dni = Math.floor((D.zISO(D.dnesISO()) - D.zISO(n.posledniImport)) / DEN_MS);
+    el.hidden = dni < 7;
+    if (dni >= 7) {
+      $('import-pripominka').innerHTML = 'Od posledního výpisu z banky uběhlo <b>' + dni + ' ' +
+        tvarDni(dni) + '</b>.';
+    }
   }
 
   /** Pondělí tohoto týdne (týden u nás začíná pondělkem). */
@@ -307,7 +335,7 @@
   function polozkaHtml(t) {
     var zn, castka, ikona, nazev, pod, barvaIkony;
     if (t.typ === 'prevod') {
-      zn = ''; castka = kc(t.castka); ikona = 'prevod';
+      zn = ''; castka = kc(t.castka); ikona = 'ui-prevod';
       nazev = 'Převod';
       pod = D.ucet(t.ucet).nazev + ' → ' + D.ucet(t.ucetDo).nazev;
       barvaIkony = 'var(--ink-3)';
@@ -438,7 +466,10 @@
         '<label>Název</label><input class="pole" id="d-nazev" value="' + esc(u ? u.nazev : '') + '" placeholder="např. Peněženka">' +
         '<label>Ikona</label>' + mrizkaIkon() +
         '<label>Barva</label>' + radekBarev() +
-        '<label>Počáteční stav (' + esc(mena()) + ')</label><input class="pole" id="d-pocatek" inputmode="decimal" value="' + (u ? u.pocatek : 0) + '">' +
+        '<label>' + (u ? 'Kolik na něm je teď' : 'Kolik na něm je') + ' (' + esc(mena()) + ')</label>' +
+        '<input class="pole" id="d-pocatek" inputmode="decimal" value="' +
+          (u ? Math.round(D.zustatekUctu(u.id) * 100) / 100 : 0) + '">' +
+        (u ? '<p class="napoveda" style="margin:-4px 0 8px;padding:0">Napište zůstatek podle banky – appka si srovná počáteční stav.</p>' : '') +
         (u ? '<button class="tl tl-nebezpeci tl-siroke" id="d-smaz">Smazat účet</button>' : ''),
       ano: 'Uložit',
       zamer: true,
@@ -449,7 +480,10 @@
         if (isNaN(pocatek)) pocatek = 0;
         var s = D.stav();
         if (u) {
-          u.nazev = nazev; u.ikona = volba.ikona; u.pocatek = pocatek; u.barva = volba.barva;
+          // zadává se dnešní zůstatek, počátek se dopočítá z pohybů
+          var pohyby = D.zustatekUctu(u.id) - (Number(u.pocatek) || 0);
+          u.nazev = nazev; u.ikona = volba.ikona; u.barva = volba.barva;
+          u.pocatek = Math.round((pocatek - pohyby) * 100) / 100;
         } else {
           s.ucty.push({ id: D.noveId('u'), nazev: nazev, ikona: volba.ikona, pocatek: pocatek,
             barva: volba.barva });
@@ -542,6 +576,14 @@
       b.classList.toggle('chip-akt', b.getAttribute('data-tema') === (s.nastaveni.tema || 'auto'));
     });
     $('pole-mena').value = mena();
+
+    // výpis z banky
+    var pocetPravidel = Object.keys(s.pravidla || {}).length;
+    var z = s.nastaveni.posledniImport;
+    $('stav-pravidel').innerHTML =
+      (z ? 'Poslední výpis načten: <b>' + esc(D.popisDne(z).split(' · ')[0]) + '</b><br>' : '') +
+      (pocetPravidel ? 'Naučeno obchodů: <b>' + pocetPravidel + '</b> · ' +
+        '<button class="odkaz" id="tl-zapomen-pravidla" style="padding:0;font-size:12px">zapomenout</button>' : '');
 
     // statistika
     var od = s.transakce.reduce(function (a, t) { return (!a || t.datum < a) ? t.datum : a; }, null);
@@ -717,13 +759,15 @@
     $('pole-castka').value = zaznam.castka;
     $('pole-datum').value = zaznam.datum;
     $('pole-pozn').value = zaznam.pozn;
-    $('rychle-castky').innerHTML = [50, 100, 200, 500, 1000].map(function (c) {
-      return '<button class="rychla" data-rychla="' + c + '">+' + cislo(c) + '</button>';
-    }).join('');
+    // u opravy nebo převodu jsou podrobnosti potřeba hned, u nového zápisu jen zdržují
+    $('zapis-podrobnosti').open = !!zaznam.id || zaznam.typ === 'prevod';
     obnovTypZaznamu();
     vykresliUctenku();
     $('prekryv-zaznam').hidden = false;
-    if (!zaznam.rezimPolozek) setTimeout(function () { $('pole-castka').focus(); }, 120);
+    // iPhone ukáže klávesnici jen při zaměření přímo v obsluze klepnutí, ne se zpožděním
+    if (!zaznam.rezimPolozek && !zaznam.id) {
+      try { $('pole-castka').focus({ preventScroll: true }); } catch (e) { $('pole-castka').focus(); }
+    }
 
     // uloženou účtenku doneseme až po otevření, ať se list neopozdí
     if (zaznam.meloFotku && zaznam.id) {
@@ -761,12 +805,27 @@
       var vybrana = proPolozku
         ? (zaznam.polozky[zaznam.katProPolozku] || {}).kat
         : zaznam.kat[typ];
-      $('vyber-kategorie').innerHTML = D.kategorieTypu(typ).map(function (k) {
+      var seznam = D.kategoriePodlePouziti(typ);
+      var videt = seznam;
+      if (!zaznam.vsechnyKat && !proPolozku && seznam.length > NA_OCI + 1) {
+        videt = seznam.slice(0, NA_OCI);
+        // vybraná kategorie musí být vidět, i když se používá málo
+        if (vybrana && !videt.some(function (k) { return k.id === vybrana; })) {
+          var v = D.najdi(seznam, vybrana);
+          if (v) videt = videt.slice(0, NA_OCI - 1).concat([v]);
+        }
+      }
+      $('vyber-kategorie').innerHTML = videt.map(function (k) {
         return '<button class="kat-tl' + (k.id === vybrana ? ' vybrano' : '') +
           '" data-vyberkat="' + esc(k.id) + '" style="--kat-barva:' + G.barva(k.barva) + '">' +
           ik(k.ikona) + '<span>' + esc(k.nazev) + '</span></button>';
-      }).join('');
+      }).join('') + (videt.length < seznam.length
+        ? '<button class="kat-tl kat-dalsi" id="kat-dalsi">' + ik('ui-dolu') +
+          '<span>Další (' + (seznam.length - videt.length) + ')</span></button>'
+        : '');
     }
+    $('zapis-napoveda').hidden = !rychlyZapis();
+    vykresliSouhrnPodrobnosti();
     vykresliPolozky();
     var ucty = D.stav().ucty;
     $('vyber-uctu').innerHTML = ucty.map(function (u) {
@@ -777,6 +836,23 @@
       return '<button class="chip' + (u.id === zaznam.ucetDo ? ' chip-akt' : '') +
         '" data-vyberucetdo="' + esc(u.id) + '">' + ik(u.ikona) + esc(u.nazev) + '</button>';
     }).join('');
+  }
+
+  var NA_OCI = 7;   // kolik kategorií je vidět bez rozbalení (+ tlačítko Další = 2 řady)
+
+  /** Nový výdaj či příjem: klepnutí na kategorii rovnou ukládá. */
+  function rychlyZapis() {
+    return zaznam && !zaznam.id && zaznam.typ !== 'prevod' && !zaznam.rezimPolozek &&
+      (zaznam.katProPolozku === null || zaznam.katProPolozku === undefined);
+  }
+
+  function vykresliSouhrnPodrobnosti() {
+    var casti = [D.ucet(zaznam.ucet).nazev];
+    var d = $('pole-datum').value || zaznam.datum;
+    casti.push(d === D.dnesISO() ? 'dnes' : D.popisDne(d).split(' · ')[0].toLowerCase());
+    var pozn = $('pole-pozn').value.trim();
+    if (pozn) casti.push('„' + pozn + '“');
+    $('podrobnosti-souhrn').textContent = casti.join(' · ');
   }
 
   function ulozZaznam() {
@@ -828,11 +904,22 @@
     var idZaznamu;
     if (zaznam.id) {
       idZaznamu = zaznam.id;
+      var puvodni = D.najdi(D.stav().transakce, zaznam.id);
+      // oprava kategorie u pohybu z výpisu = appka se to naučí na příště
+      if (puvodni && puvodni.klic && data.kat && puvodni.kat !== data.kat && typ !== 'prevod') {
+        D.stav().pravidla[puvodni.klic] = data.kat;
+      }
       D.upravTransakci(zaznam.id, data);
       hlaska('Změny uloženy.');
     } else {
-      idZaznamu = D.pridejTransakci(data).id;
-      hlaska(typ === 'prijem' ? 'Příjem zapsán.' : (typ === 'prevod' ? 'Převod zapsán.' : 'Výdaj zapsán.'));
+      var nova = D.pridejTransakci(data);
+      idZaznamu = nova.id;
+      var popisZapisu = typ === 'prevod' ? 'Převod ' + cislo(castka) + ' ' + mena()
+        : D.kategorie(hlavniKat).nazev + ' ' + (typ === 'prijem' ? '+' : '−') + cislo(castka) + ' ' + mena();
+      hlaska(popisZapisu + ' zapsáno', {
+        popis: 'Zpět',
+        fn: function () { D.smazTransakci(nova.id); vykresli(); hlaska('Vráceno.'); }
+      });
     }
 
     // účtenka
@@ -913,6 +1000,10 @@
     var poslDen = new Date(rok, mesic + 1, 0).getDate();
     var doDne = jeAktualni ? dnes.getDate() : poslDen;
 
+    var mesice = D.poslednichMesicu(rok, mesic, 6);
+    $('graf-mesice').innerHTML = G.grafMesicu(mesice, mesicVGrafu);
+    ctiMesic(mesice, mesicVGrafu);
+
     $('graf-dny').innerHTML = G.sloupceDnu(D.dennitrata(rok, mesic),
       jeAktualni ? dnes.getDate() : 0, kc);
     $('graf-kumulativne').innerHTML = G.caraKumulativne(D.kumulativne(rok, mesic), doDne, kc);
@@ -980,8 +1071,6 @@
     $('tl-polozky').hidden = rezim || jePrevod;
     $('polozky-blok').hidden = !rezim;
     $('pole-castka').readOnly = rezim;
-    // v režimu položek se částka počítá, rychlá tlačítka by mátla
-    $('rychle-castky').hidden = rezim;
 
     if (!rezim) { $('polozky-soucet').textContent = ''; return; }
 
@@ -1153,12 +1242,12 @@
     var datum = D.dnesISO();
     var t = D.pridejTransakci({
       datum: datum, castka: s.castka, typ: s.typ, kat: s.kat,
-      ucet: s.ucet, ucetDo: null, pozn: ''
+      ucet: s.ucet, ucetDo: null, pozn: s.poznamka || ''
     });
     var dnes = new Date();
     rok = dnes.getFullYear(); mesic = dnes.getMonth();
     vykresli();
-    hlaska(s.nazev + ' ' + cislo(s.castka) + ' ' + mena() + ' zapsáno', {
+    hlaska((s.poznamka || s.nazev) + ' ' + cislo(s.castka) + ' ' + mena() + ' zapsáno', {
       popis: 'Zpět',
       fn: function () {
         D.smazTransakci(t.id);
@@ -1167,6 +1256,363 @@
       }
     });
   }
+
+  /* =================================================================
+     VÝPIS Z BANKY
+     Soubor → rozbor (FImport) → kontrola v seznamu → zápis.
+     Opravená kategorie platí hned pro všechny řádky téhož obchodu
+     a appka si ji zapamatuje na příští výpis.
+     ================================================================= */
+
+  var imp = null;
+  var vyberImport = null;   // index řádku, kterému se právě vybírá kategorie
+
+  function tvarPohybu(n) {
+    if (n === 1) return 'pohyb';
+    if (n >= 2 && n <= 4) return 'pohyby';
+    return 'pohybů';
+  }
+
+  /** Účet, kam výpis nejspíš patří: minule použitý, jinak první „kartový“. */
+  function vychoziUcetImportu() {
+    var s = D.stav();
+    var minule = s.nastaveni.importUcet;
+    if (minule && D.najdi(s.ucty, minule)) return minule;
+    var karta = s.ucty.filter(function (u) { return u.ikona === 'karta' || u.ikona === 'banka'; })[0];
+    return (karta || s.ucty.filter(function (u) { return u.ikona !== 'hotovost'; })[0] || s.ucty[0]).id;
+  }
+
+  function uctyHotovosti() {
+    var s = D.stav();
+    var h = D.najdi(s.ucty, 'u-hotovost') ||
+      s.ucty.filter(function (u) { return u.ikona === 'hotovost'; })[0];
+    return h && h.id !== imp.ucet ? h : null;
+  }
+
+  function otevriImport() {
+    imp = { ucet: vychoziUcetImportu(), vynucene: null, nauceno: {} };
+    vykresliImportUvod();
+    $('prekryv-import').hidden = false;
+  }
+
+  function zavriImport() {
+    $('prekryv-import').hidden = true;
+    imp = null;
+  }
+
+  function vykresliImportUvod() {
+    $('import-pata').hidden = true;
+    var ucty = D.stav().ucty;
+    $('import-telo').innerHTML =
+      '<div class="imp-kroky">' +
+        '<div class="imp-krok"><b>1</b><span>V internetovém bankovnictví otevřete pohyby na účtu a dejte ' +
+          '<i>Export</i> nebo <i>Stáhnout</i> → <b>CSV</b>. Umí to každá banka (Fio, KB a ČSOB i formát GPC – bere se taky).</span></div>' +
+        '<div class="imp-krok"><b>2</b><span>Tady soubor vyberte. Appka pohyby sama roztřídí do kategorií a ukáže vám je ke kontrole.</span></div>' +
+        '<div class="imp-krok"><b>3</b><span>Co opravíte, si zapamatuje. Příště už jen potvrdíte.</span></div>' +
+      '</div>' +
+      '<div class="skupina-nadpis">Do kterého účtu</div>' +
+      '<div class="chipy chipy-obal">' + ucty.map(function (u) {
+        return '<button class="chip' + (u.id === imp.ucet ? ' chip-akt' : '') + '" data-impucet="' +
+          esc(u.id) + '">' + ik(u.ikona) + esc(u.nazev) + '</button>';
+      }).join('') + '</div>' +
+      '<button class="tl tl-hlavni tl-siroke tl-radek" id="import-vybrat">' + ik('ui-nahrat') +
+        ' Vybrat soubor s výpisem</button>' +
+      '<p class="napoveda">Soubor se čte jen tady v telefonu, nikam se neposílá. Stejný výpis můžete ' +
+        'načíst klidně znovu – co už v appce je, se podruhé nezapíše.</p>';
+  }
+
+  function nactiSouborVypisu(soubor) {
+    var ctecka = new FileReader();
+    ctecka.onload = function () {
+      if (!imp) return;
+      imp.nazev = soubor.name;
+      imp.text = global.FImport.dekoduj(ctecka.result);
+      imp.vynucene = null;
+      zpracujImport();
+    };
+    ctecka.onerror = function () { hlaska('Soubor se nepovedlo přečíst.'); };
+    ctecka.readAsArrayBuffer(soubor);
+  }
+
+  function zpracujImport() {
+    var FI = global.FImport;
+    var s = D.stav();
+    var r;
+    try { r = FI.rozeber(imp.text, imp.vynucene); }
+    catch (e) { r = { pohyby: [], chyba: 'Tomuhle souboru nerozumím.', hlavicka: [] }; }
+    imp.rozbor = r;
+
+    var hotovost = uctyHotovosti();
+    FI.zatrid(r.pohyby, s.pravidla, function (id, typ) {
+      var k = D.najdi(s.kategorie, id);
+      return !!k && k.typ === typ;
+    }, hotovost ? hotovost.id : null);
+    FI.otisky(r.pohyby);
+
+    // co už v appce je: stejný otisk = stejný řádek ze staršího výpisu
+    var zname = {};
+    s.transakce.forEach(function (t) { if (t.imp) zname[t.imp] = true; });
+    // a co jste možná zapsali ručně: stejná částka ±3 dny na stejném účtu
+    var rucni = s.transakce.filter(function (t) { return !t.imp && t.ucet === imp.ucet && t.typ !== 'prevod'; });
+    var pouzite = {};
+    r.pohyby.forEach(function (p) {
+      p.uz = !!zname[p.otisk];
+      p.vybrano = !p.uz;
+      p.mozna = null;
+      if (p.uz || p.prevod) return;
+      for (var i = 0; i < rucni.length; i++) {
+        var t = rucni[i];
+        if (pouzite[t.id] || t.typ !== p.typ || Math.abs(t.castka - p.suma) > 0.01) continue;
+        if (Math.abs(D.zISO(t.datum) - D.zISO(p.datum)) > 3 * DEN_MS) continue;
+        pouzite[t.id] = true;
+        p.mozna = t; p.vybrano = false;
+        break;
+      }
+    });
+    r.pohyby.sort(function (a, b) { return a.datum < b.datum ? 1 : (a.datum > b.datum ? -1 : 0); });
+    imp.pohyby = r.pohyby;
+    vykresliImportSeznam();
+  }
+
+  function potrebujePomoc(p) {
+    return !p.prevod && !p.zdrojKat && !p.rucne;
+  }
+
+  function radekImportu(p, i) {
+    var zn = p.typ === 'prijem' ? 'prijem' : 'vydaj';
+    var katHtml;
+    if (p.prevod) {
+      var h = uctyHotovosti();
+      katHtml = ik('ui-prevod') + '<span>Výběr → ' + esc(h ? h.nazev : 'hotovost') + '</span>';
+    } else {
+      var k = D.kategorie(p.kat);
+      katHtml = ik(k.ikona) + '<span>' + esc(p.kat ? k.nazev : 'Vybrat kategorii') + '</span>';
+    }
+    var barva = p.prevod ? 'var(--ink-3)' : G.barva(D.kategorie(p.kat).barva);
+    var pod = D.popisDne(p.datum).split(' · ')[0];
+    if (p.mozna) pod += ' · už zapsáno ručně' + (p.mozna.pozn ? ' („' + esc(p.mozna.pozn) + '“)' : '') + '?';
+    return '<div class="imp-radek' + (p.vybrano ? '' : ' vypnuto') + '">' +
+      '<button class="imp-check" data-impprepni="' + i + '" aria-label="Zapsat tento pohyb">' +
+        (p.vybrano ? ik('ui-ok') : '') + '</button>' +
+      '<span class="imp-text"><span class="imp-popis">' + esc(p.popis) + '</span>' +
+        '<span class="imp-pod">' + pod + '</span></span>' +
+      '<span class="imp-castka ' + zn + '">' + (p.typ === 'prijem' ? '+' : '−') + esc(cislo(p.suma)) + '</span>' +
+      '<button class="imp-kat' + (potrebujePomoc(p) ? ' imp-kat-chybi' : '') + '" data-impkat="' + i +
+        '" style="--kat-barva:' + barva + '">' + katHtml + ik('ui-dolu') + '</button>' +
+    '</div>';
+  }
+
+  function vykresliImportSeznam() {
+    var r = imp.rozbor;
+    var pohyby = imp.pohyby;
+    var nove = pohyby.filter(function (p) { return !p.uz; });
+    var uzPocet = pohyby.length - nove.length;
+    var u = D.ucet(imp.ucet);
+
+    var html = '<div class="karta imp-souhrn">' +
+      '<div class="imp-soubor">' + ik('dokument') + '<b>' + esc(imp.nazev || 'výpis') + '</b></div>';
+    if (pohyby.length) {
+      var od = pohyby[pohyby.length - 1].datum, doKdy = pohyby[0].datum;
+      html += '<div>' + pohyby.length + ' ' + tvarPohybu(pohyby.length) + ' · ' +
+        esc(D.popisDne(od).split(' · ')[0]) + ' – ' + esc(D.popisDne(doKdy).split(' · ')[0]) +
+        ' · do účtu <b>' + esc(u.nazev) + '</b></div>';
+      if (uzPocet) html += '<div class="imp-uz">' + uzPocet + ' ' + tvarPohybu(uzPocet) +
+        ' už v appce je, ty se znovu nezapíšou.</div>';
+    }
+    if (r.chyba) html += '<div class="imp-chyba">' + esc(r.chyba) + '</div>';
+    html += '</div>';
+
+    // ruční přiřazení sloupců, kdyby odhad nesedl
+    if (r.format === 'CSV' && r.hlavicka && r.hlavicka.length) {
+      var volby = function (vybrany, prazdna) {
+        return (prazdna ? '<option value="">— nic —</option>' : '') + r.hlavicka.map(function (h, i) {
+          return '<option value="' + i + '"' + (i === vybrany ? ' selected' : '') + '>' +
+            esc(h || ('Sloupec ' + (i + 1))) + '</option>';
+        }).join('');
+      };
+      var sl = r.sloupce || {};
+      html += '<details class="podrobnosti imp-sloupce"' + (r.chyba ? ' open' : '') + '>' +
+        '<summary><span>Sloupce ze souboru</span><span class="podrobnosti-souhrn">kdyby něco nesedělo</span></summary>' +
+        '<label class="radek-pole"><span>Datum</span><select class="pole" data-impsloupec="datum">' + volby(sl.datum, false) + '</select></label>' +
+        '<label class="radek-pole"><span>Částka</span><select class="pole" data-impsloupec="castka">' + volby(sl.castka, false) + '</select></label>' +
+        '<label class="radek-pole"><span>Kdo / co</span><select class="pole" data-impsloupec="nazev">' + volby(sl.nazev, true) + '</select></label>' +
+        '<label class="radek-pole"><span>Zpráva</span><select class="pole" data-impsloupec="zprava">' + volby(sl.zprava, true) + '</select></label>' +
+      '</details>';
+    }
+
+    var pomoc = [], hotove = [], mozna = [];
+    pohyby.forEach(function (p, i) {
+      if (p.uz) return;
+      if (p.mozna) mozna.push(radekImportu(p, i));
+      else if (potrebujePomoc(p)) pomoc.push(radekImportu(p, i));
+      else hotove.push(radekImportu(p, i));
+    });
+    if (pomoc.length) {
+      html += '<div class="den-nadpis"><span>Nevím, kam patří (' + pomoc.length + ')</span></div>' +
+        '<p class="napoveda imp-rada">Klepněte na kategorii. Stejný obchod se zařadí i jinde a příště už to appka bude vědět.</p>' +
+        '<div class="skupina-karta">' + pomoc.join('') + '</div>';
+    }
+    if (hotove.length) {
+      html += '<div class="den-nadpis"><span>Roztříděno samo (' + hotove.length + ')</span></div>' +
+        '<div class="skupina-karta">' + hotove.join('') + '</div>';
+    }
+    if (mozna.length) {
+      html += '<div class="den-nadpis"><span>Možná už zapsané ručně (' + mozna.length + ')</span></div>' +
+        '<p class="napoveda imp-rada">Tyhle se nezapíšou, dokud je nezaškrtnete.</p>' +
+        '<div class="skupina-karta">' + mozna.join('') + '</div>';
+    }
+    if (!nove.length && pohyby.length) {
+      html += '<p class="prazdno">Všechno z tohohle výpisu už v appce je.</p>';
+    }
+    html += '<button class="tl tl-siroke" id="import-jiny">Vybrat jiný soubor</button>';
+
+    $('import-telo').innerHTML = html;
+    obnovPatuImportu();
+  }
+
+  function obnovPatuImportu() {
+    var n = imp.pohyby.filter(function (p) { return p.vybrano && !p.uz; }).length;
+    $('import-pata').hidden = !imp.pohyby.length;
+    $('import-zapsat').disabled = n === 0;
+    $('import-zapsat').textContent = n ? 'Zapsat ' + n + ' ' + tvarPohybu(n) : 'Není co zapsat';
+  }
+
+  function vyberKategoriiImportu(i) {
+    var p = imp.pohyby[i];
+    if (!p) return;
+    vyberImport = i;
+    var hotovost = p.typ === 'vydaj' ? uctyHotovosti() : null;
+    dialog({
+      titulek: 'Kam to patří?',
+      telo: '<p><b>' + esc(p.popis) + '</b> · ' + esc(cislo(p.suma)) + ' ' + esc(mena()) + '</p>' +
+        '<div class="kat-mrizka">' + D.kategoriePodlePouziti(p.typ).map(function (k) {
+          return '<button class="kat-tl' + (!p.prevod && k.id === p.kat ? ' vybrano' : '') +
+            '" data-impvyber="' + esc(k.id) + '" style="--kat-barva:' + G.barva(k.barva) + '">' +
+            ik(k.ikona) + '<span>' + esc(k.nazev) + '</span></button>';
+        }).join('') + '</div>' +
+        (hotovost ? '<button class="tl tl-siroke tl-radek" style="margin-top:0" data-impvyber="__prevod">' +
+          ik('ui-prevod') + ' Výběr hotovosti → ' + esc(hotovost.nazev) + '</button>' : ''),
+      ano: 'Zavřít', bezZruseni: true
+    });
+  }
+
+  function nastavKategoriiImportu(i, kat) {
+    var p = imp.pohyby[i];
+    var prevod = kat === '__prevod';
+    function prirad(x) {
+      x.prevod = prevod;
+      x.kat = prevod ? null : kat;
+      x.rucne = true;
+      if (!x.uz && !x.mozna) x.vybrano = true;
+    }
+    prirad(p);
+    var dalsi = 0;
+    if (p.klic) {
+      if (!prevod) imp.nauceno[p.klic] = kat;
+      imp.pohyby.forEach(function (x) {
+        if (x === p || x.rucne || x.klic !== p.klic || x.typ !== p.typ) return;
+        prirad(x);
+        dalsi++;
+      });
+    }
+    zavriDialog();
+    vykresliImportSeznam();
+    if (dalsi) hlaska('Zařazeno i u ' + dalsi + ' dalších ' + (dalsi === 1 ? 'platby' : 'plateb') + ' stejného obchodu.');
+  }
+
+  function zapisImport() {
+    var s = D.stav();
+    var hotovost = uctyHotovosti();
+    var vybrane = imp.pohyby.filter(function (p) { return p.vybrano && !p.uz; });
+    if (!vybrane.length) return;
+    vybrane.forEach(function (p) {
+      var prevod = p.prevod && hotovost;
+      D.pridejTransakci({
+        datum: p.datum, castka: p.suma,
+        typ: prevod ? 'prevod' : p.typ,
+        kat: prevod ? null : p.kat,
+        ucet: imp.ucet,
+        ucetDo: prevod ? hotovost.id : null,
+        pozn: p.popis,
+        imp: p.otisk,
+        klic: p.klic || null
+      });
+    });
+    Object.keys(imp.nauceno).forEach(function (k) { s.pravidla[k] = imp.nauceno[k]; });
+    s.nastaveni.posledniImport = D.dnesISO();
+    s.nastaveni.importUcet = imp.ucet;
+    D.ulozHned();
+
+    var ucetId = imp.ucet;
+    var n = vybrane.length;
+    // ukázat měsíc, kam spadá nejnovější pohyb
+    var nej = vybrane.reduce(function (a, p) { return p.datum > a ? p.datum : a; }, '');
+    rok = +nej.slice(0, 4); mesic = +nej.slice(5, 7) - 1;
+    zavriImport();
+    jdi('prehled');
+
+    var u = D.ucet(ucetId);
+    var z = Math.round(D.zustatekUctu(ucetId) * 100) / 100;
+    dialog({
+      titulek: 'Zapsáno ' + n + ' ' + tvarPohybu(n),
+      telo: '<p>Ještě zůstatek: podle appky je teď na účtu <b>' + esc(u.nazev) + '</b> ' +
+        esc(kc(z)) + '. Když banka ukazuje jinou částku, přepište ji.</p>' +
+        '<input class="pole" id="d-zustatek" inputmode="decimal" value="' + z + '">',
+      ano: 'Uložit', ne: 'Sedí',
+      potvrd: function () {
+        var nova = parsujCastku($('d-zustatek').value);
+        if (isNaN(nova)) { hlaska('Tohle není částka.'); return false; }
+        if (Math.abs(nova - z) > 0.004) {
+          var uc = D.najdi(D.stav().ucty, ucetId);
+          if (uc) uc.pocatek = Math.round(((Number(uc.pocatek) || 0) + nova - z) * 100) / 100;
+          D.ulozHned();
+          hlaska('Zůstatek srovnán s bankou.');
+        }
+        return true;
+      }
+    });
+  }
+
+  function zapojImport() {
+    naSlys($('import-zavrit'), 'click', zavriImport);
+    naSlys($('import-zapsat'), 'click', zapisImport);
+    naSlys($('pole-vypis'), 'change', function () {
+      var soubor = this.files && this.files[0];
+      this.value = '';
+      if (soubor && imp) nactiSouborVypisu(soubor);
+    });
+    naSlys($('import-telo'), 'click', function (e) {
+      if (!imp) return;
+      var u = e.target.closest('[data-impucet]');
+      if (u) { imp.ucet = u.getAttribute('data-impucet'); vykresliImportUvod(); return; }
+      if (e.target.closest('#import-vybrat') || e.target.closest('#import-jiny')) {
+        $('pole-vypis').click(); return;
+      }
+      var pr = e.target.closest('[data-impprepni]');
+      if (pr) {
+        var p = imp.pohyby[Number(pr.getAttribute('data-impprepni'))];
+        if (p) { p.vybrano = !p.vybrano; vykresliImportSeznam(); }
+        return;
+      }
+      var k = e.target.closest('[data-impkat]');
+      if (k) vyberKategoriiImportu(Number(k.getAttribute('data-impkat')));
+    });
+    naSlys($('import-telo'), 'change', function (e) {
+      var sel = e.target.closest('[data-impsloupec]');
+      if (!sel || !imp) return;
+      imp.vynucene = {};
+      vse('[data-impsloupec]', $('import-telo')).forEach(function (x) {
+        imp.vynucene[x.getAttribute('data-impsloupec')] = x.value;
+      });
+      zpracujImport();
+    });
+    naSlys($('dialog-telo'), 'click', function (e) {
+      if (vyberImport === null || !imp) return;
+      var b = e.target.closest('[data-impvyber]');
+      if (b) nastavKategoriiImportu(vyberImport, b.getAttribute('data-impvyber'));
+    });
+  }
+
 
   /* =================================================================
      ZABEZPEČENÍ
@@ -1358,18 +1804,45 @@
     naSlys($('pole-pozn'), 'keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); ulozZaznam(); }
     });
+    naSlys($('pole-pozn'), 'input', function () { if (zaznam) vykresliSouhrnPodrobnosti(); });
+    naSlys($('pole-datum'), 'change', function () { if (zaznam) vykresliSouhrnPodrobnosti(); });
+
+    // start, připomínka a tlačítka „Načíst výpis“
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest ? e.target.closest('[data-akce]') : null;
+      if (!a) return;
+      var co = a.getAttribute('data-akce');
+      if (co === 'import') otevriImport();
+      else if (co === 'pridat') { zaloz('vydaj'); otevriZaznam(); }
+    });
+    naSlys($('rychle-chipy'), 'click', function (e) {
+      var b = e.target.closest('[data-rychly]');
+      if (b) zapisZeSablony(Number(b.getAttribute('data-rychly')));
+    });
 
     naSlys($('prepinac-typ'), 'click', function (e) {
       var b = e.target.closest('[data-typ]');
       if (!b || !zaznam) return;
       zaznam.typ = b.getAttribute('data-typ');
+      if (zaznam.typ === 'prevod') $('zapis-podrobnosti').open = true;
       obnovTypZaznamu();
     });
 
     naSlys($('vyber-kategorie'), 'click', function (e) {
+      if (!zaznam) return;
+      if (e.target.closest('#kat-dalsi')) { zaznam.vsechnyKat = true; obnovTypZaznamu(); return; }
       var b = e.target.closest('[data-vyberkat]');
-      if (!b || !zaznam) return;
+      if (!b) return;
       var vybrana = b.getAttribute('data-vyberkat');
+      if (rychlyZapis()) {
+        zaznam.kat[zaznam.typ] = vybrana;
+        var c = parsujCastku($('pole-castka').value);
+        if (c > 0) { ulozZaznam(); return; }
+        obnovTypZaznamu();
+        hlaska('Napište nejdřív částku.');
+        $('pole-castka').focus();
+        return;
+      }
       if (zaznam.katProPolozku !== null && zaznam.katProPolozku !== undefined) {
         sesbirejPolozky();
         if (zaznam.polozky[zaznam.katProPolozku]) {
@@ -1392,14 +1865,6 @@
       if (!b || !zaznam) return;
       zaznam.ucetDo = b.getAttribute('data-vyberucetdo');
       obnovTypZaznamu();
-    });
-    naSlys($('rychle-castky'), 'click', function (e) {
-      var b = e.target.closest('[data-rychla]');
-      if (!b) return;
-      var pole = $('pole-castka');
-      var teď = parsujCastku(pole.value);
-      if (isNaN(teď)) teď = 0;
-      pole.value = String(Math.round((teď + Number(b.getAttribute('data-rychla'))) * 100) / 100);
     });
 
     // dialog
@@ -1482,6 +1947,8 @@
     naSlys($('prekryv-fotka'), 'click', function (e) {
       if (e.target === $('prekryv-fotka')) schovejFotku();
     });
+
+    zapojImport();
 
     // grafy
     naSlys($('graf-ucty'), 'click', function (e) {
@@ -1589,6 +2056,15 @@
     });
     naSlys($('tl-nova-kategorie'), 'click', function () { dialogKategorie(null); });
     naSlys($('tl-nova-pravidelna'), 'click', dialogPravidelne);
+    naSlys($('stav-pravidel'), 'click', function (e) {
+      if (e.target.id !== 'tl-zapomen-pravidla') return;
+      dialog({
+        titulek: 'Zapomenout naučené obchody?',
+        telo: '<p>Zapsané záznamy zůstanou. Jen příští výpis se bude třídit znovu podle vestavěného slovníku.</p>',
+        ano: 'Zapomenout', nebezpeci: true,
+        potvrd: function () { D.stav().pravidla = {}; D.ulozHned(); hlaska('Zapomenuto.'); return true; }
+      });
+    });
     naSlys($('seznam-pravidelnych'), 'click', function (e) {
       var b = e.target.closest('[data-smazpravidelnou]');
       if (!b) return;
@@ -1685,6 +2161,7 @@
       if (e.key !== 'Escape') return;
       if (!$('prekryv-fotka').hidden) schovejFotku();
       else if (!$('prekryv-dialog').hidden) zavriDialog();
+      else if (!$('prekryv-import').hidden) zavriImport();
       else if (!$('prekryv-sablony').hidden) $('prekryv-sablony').hidden = true;
       else if (!$('prekryv-zaznam').hidden) zavriZaznam();
     });

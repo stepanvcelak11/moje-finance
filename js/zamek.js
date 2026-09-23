@@ -490,19 +490,12 @@
 
     // trezor zatím není – načteme nešifrovaná data
     D.nacti();
-    var stav = D.stav();
 
-    if (!podporovano() || stav.nastaveni.bezZamku) {
-      zamceno = false;
-      schovejAPust();
-      return;
-    }
-
-    zamceno = true;
-    rezim = 'nastavit';
-    document.body.classList.add('zamceno');
-    vykresliZamek();
-    $('zamek').hidden = false;
+    // Zámek je dobrovolný – první spuštění jde rovnou do appky
+    // (PIN při každém otevření odrazoval od rychlého zápisu).
+    // Zapnout se dá ve Víc → Zabezpečení.
+    zamceno = false;
+    schovejAPust();
   }
 
   /** Zapnutí zámku dodatečně (z Nastavení, když byl vypnutý). */

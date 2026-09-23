@@ -81,6 +81,7 @@
       ucty: VYCHOZI_UCTY.map(function (u) { return kopie(u); }),
       rozpocty: {},
       pravidelne: [],
+      pravidla: {},
       nastaveni: { mena: 'Kč', tema: 'auto', vytvoreno: dnesISO() }
     };
   }
@@ -104,6 +105,9 @@
 
   var MESICE = ['Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen',
     'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
+  // šestý pád – „utraceno v září“
+  var MESICE_V = ['Lednu', 'Únoru', 'Březnu', 'Dubnu', 'Květnu', 'Červnu',
+    'Červenci', 'Srpnu', 'Září', 'Říjnu', 'Listopadu', 'Prosinci'];
   var MESICE_KRATCE = ['led', 'úno', 'bře', 'dub', 'kvě', 'čvn', 'čvc', 'srp', 'zář', 'říj', 'lis', 'pro'];
   var DNY = ['neděle', 'pondělí', 'úterý', 'středa', 'čtvrtek', 'pátek', 'sobota'];
 
@@ -154,6 +158,7 @@
         ucty: Array.isArray(d.ucty) && d.ucty.length ? d.ucty : z.ucty,
         rozpocty: d.rozpocty && typeof d.rozpocty === 'object' ? d.rozpocty : {},
         pravidelne: Array.isArray(d.pravidelne) ? d.pravidelne : [],
+        pravidla: d.pravidla && typeof d.pravidla === 'object' ? d.pravidla : {},
         nastaveni: Object.assign({}, z.nastaveni, d.nastaveni || {})
       };
     } catch (e) {
@@ -478,11 +483,14 @@
 
     var mapa = {};
     stav.transakce.forEach(function (t) {
-      if (t.typ === 'prevod' || t.datum < od) return;
+      // z výpisu a pravidelné platby se zapisují samy, šablony jsou pro ruční zápis
+      if (t.typ === 'prevod' || t.datum < od || t.imp || t.zdroj) return;
       var k = t.typ + '|' + t.kat + '|' + t.ucet;
-      if (!mapa[k]) mapa[k] = { typ: t.typ, kat: t.kat, ucet: t.ucet, pocet: 0, castky: [] };
+      if (!mapa[k]) mapa[k] = { typ: t.typ, kat: t.kat, ucet: t.ucet, pocet: 0, castky: [], pozn: {} };
       mapa[k].pocet++;
       mapa[k].castky.push(t.castka);
+      var p = (t.pozn || '').trim();
+      if (p) mapa[k].pozn[p] = (mapa[k].pozn[p] || 0) + 1;
     });
 
     return Object.keys(mapa).map(function (k) {
@@ -494,6 +502,11 @@
       });
       z.castka = nejPocet >= 2 ? Number(nej) : Math.round(median(z.castky));
       var kat = kategorie(z.kat);
+      var nejPozn = null;
+      Object.keys(z.pozn).forEach(function (p) {
+        if (z.pozn[p] * 2 > z.pocet && (!nejPozn || z.pozn[p] > z.pozn[nejPozn])) nejPozn = p;
+      });
+      z.poznamka = nejPozn || '';
       z.nazev = kat.nazev;
       z.ikona = kat.ikona;
       z.barva = kat.barva;
@@ -503,6 +516,25 @@
     }).sort(function (a, b) {
       return b.pocet - a.pocet;
     }).slice(0, kolik || 3);
+  }
+
+  /**
+   * Kategorie daného typu seřazené podle toho, jak často se poslední
+   * tři měsíce používaly; nepoužité zůstávají ve výchozím pořadí.
+   */
+  function kategoriePodlePouziti(typ) {
+    var hranice = new Date();
+    hranice.setDate(hranice.getDate() - 90);
+    var od = naISO(hranice);
+    var pocty = {};
+    stav.transakce.forEach(function (t) {
+      if (t.typ !== typ || t.datum < od) return;
+      rozpad(t).forEach(function (d) { pocty[d.kat] = (pocty[d.kat] || 0) + 1; });
+    });
+    var seznam = kategorieTypu(typ);
+    return seznam.map(function (k, i) { return { k: k, i: i, n: pocty[k.id] || 0 }; })
+      .sort(function (a, b) { return (b.n - a.n) || (a.i - b.i); })
+      .map(function (x) { return x.k; });
   }
 
   /* ---------- podklady pro grafy ---------- */
@@ -714,7 +746,8 @@
       aplikace: 'Moje finance', verze: VERZE_DAT,
       zaloha: new Date().toISOString(),
       transakce: stav.transakce, kategorie: stav.kategorie, ucty: stav.ucty,
-      rozpocty: stav.rozpocty, pravidelne: stav.pravidelne, nastaveni: stav.nastaveni
+      rozpocty: stav.rozpocty, pravidelne: stav.pravidelne, pravidla: stav.pravidla,
+      nastaveni: stav.nastaveni
     }, null, 1);
   }
 
@@ -785,6 +818,7 @@
     stav.ucty = Array.isArray(d.ucty) && d.ucty.length ? d.ucty : z.ucty;
     stav.rozpocty = d.rozpocty && typeof d.rozpocty === 'object' ? d.rozpocty : {};
     stav.pravidelne = Array.isArray(d.pravidelne) ? d.pravidelne : [];
+    stav.pravidla = d.pravidla && typeof d.pravidla === 'object' ? d.pravidla : {};
     stav.nastaveni = Object.assign({}, z.nastaveni, d.nastaveni || {});
     stav.kategorie.forEach(function (k) { k.ikona = ikonaNaKlic(k.ikona); });
     stav.ucty.forEach(function (u) { u.ikona = ikonaNaKlic(u.ikona); });
@@ -808,6 +842,7 @@
     KLIC: KLIC,
     MESICE: MESICE,
     MESICE_KRATCE: MESICE_KRATCE,
+    MESICE_V: MESICE_V,
     nacti: nacti,
     nactiZTextu: nactiZTextu,
     nastavSifru: nastavSifru,
@@ -836,6 +871,7 @@
     kategorie: kategorie,
     ucet: ucet,
     kategorieTypu: kategorieTypu,
+    kategoriePodlePouziti: kategoriePodlePouziti,
     serazene: serazene,
     vMesici: vMesici,
     souhrn: souhrn,
